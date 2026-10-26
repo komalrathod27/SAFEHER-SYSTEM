@@ -1,0 +1,843 @@
+/* ===== SafeHer Profile ===== */
+
+.pf-page {
+  --pf-blue: #287df5;
+  --pf-purple: #7c3aed;
+  --pf-pink: #e94b9b;
+  --pf-navy: #172554;
+
+  --pf-bg: #f3f4f9;
+  --pf-card: #ffffff;
+  --pf-field: #f7f8fc;
+  --pf-text: #252b38;
+  --pf-muted: #7b8494;
+  --pf-border: #e5e7f0;
+  --pf-success: #168345;
+
+  min-height: 100vh;
+  background: var(--pf-bg);
+  padding-bottom: 50px;
+  color: var(--pf-text);
+}
+
+.pf-page * {
+  box-sizing: border-box;
+}
+
+/* =========================
+   HERO
+========================= */
+
+.pf-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 38px 20px 90px;
+  background: linear-gradient(120deg, #172554 0%, #3a2a9c 55%, #7c3aed 100%);
+}
+
+.pf-shape {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.pf-shape-one {
+  width: 280px;
+  height: 280px;
+  right: -60px;
+  top: -140px;
+  background: rgba(233, 75, 155, 0.22);
+}
+
+.pf-shape-two {
+  width: 180px;
+  height: 180px;
+  right: 24%;
+  bottom: -110px;
+  background: rgba(40, 125, 245, 0.25);
+}
+
+.pf-shape-three {
+  width: 90px;
+  height: 90px;
+  left: 6%;
+  top: 18px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.pf-hero-inner {
+  position: relative;
+  z-index: 2;
+  max-width: 1150px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+/* PHOTO */
+.pf-photo {
+  position: relative;
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+  padding: 4px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffffff, #e9defd);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+.pf-photo img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #ffffff;
+  background: #ffffff;
+}
+
+.pf-camera {
+  position: absolute;
+  right: 2px;
+  bottom: 4px;
+  width: 34px;
+  height: 34px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  background: var(--pf-pink);
+  color: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.pf-camera:hover {
+  transform: scale(1.1);
+}
+
+/* USER TEXT */
+.pf-user {
+  flex: 1;
+  min-width: 0;
+}
+
+.pf-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.pf-user h1 {
+  margin: 0 0 6px;
+  color: #ffffff;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.pf-user-mail {
+  margin: 0 0 14px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  word-break: break-all;
+}
+
+.pf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pf-chip-green {
+  background: rgba(34, 197, 94, 0.2);
+  color: #b9f6cf;
+}
+
+/* EDIT BUTTON */
+.pf-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--pf-purple);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pf-edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* =========================
+   LAYOUT
+========================= */
+
+.pf-container {
+  max-width: 1150px;
+  margin: -48px auto 0;
+  padding: 0 20px;
+  position: relative;
+  z-index: 3;
+}
+
+.pf-layout {
+  display: grid;
+  grid-template-columns: 1fr 330px;
+  gap: 22px;
+  align-items: start;
+}
+
+.pf-main,
+.pf-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pf-side {
+  position: sticky;
+  top: 20px;
+}
+
+/* =========================
+   CARDS
+========================= */
+
+.pf-card {
+  background: var(--pf-card);
+  border: 1px solid var(--pf-border);
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 6px 22px rgba(40, 40, 90, 0.07);
+}
+
+.pf-card-head {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--pf-border);
+}
+
+.pf-card-head h2 {
+  margin: 0 0 2px;
+  color: var(--pf-navy);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.pf-card-head p {
+  margin: 0;
+  color: var(--pf-muted);
+  font-size: 12px;
+}
+
+.pf-head-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 16px;
+}
+
+.pf-blue {
+  background: #e4efff;
+  color: var(--pf-blue);
+}
+
+.pf-purple {
+  background: #ede7ff;
+  color: var(--pf-purple);
+}
+
+.pf-pink {
+  background: #ffe6f2;
+  color: var(--pf-pink);
+}
+
+.pf-green {
+  background: #e2f6ea;
+  color: var(--pf-success);
+}
+
+.pf-navy {
+  background: #e3e8f7;
+  color: var(--pf-navy);
+}
+
+/* =========================
+   INFO GRID
+========================= */
+
+.pf-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.pf-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.pf-span-2 {
+  grid-column: 1 / -1;
+}
+
+.pf-span-all {
+  grid-column: 1 / -1;
+}
+
+.pf-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+  padding: 13px 15px;
+  background: var(--pf-field);
+  border: 1px solid var(--pf-border);
+  border-radius: 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.pf-item:hover {
+  border-color: #cfc5f5;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.09);
+  transform: translateY(-1px);
+}
+
+.pf-item-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid var(--pf-border);
+  color: var(--pf-purple);
+  font-size: 14px;
+}
+
+.pf-item>div {
+  min-width: 0;
+}
+
+.pf-item label {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--pf-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.pf-item p {
+  margin: 0;
+  color: var(--pf-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* =========================
+   SIDE COLUMN
+========================= */
+
+.pf-account-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pf-account-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 0;
+  border-bottom: 1px dashed var(--pf-border);
+}
+
+.pf-account-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pf-account-list li:first-child {
+  padding-top: 0;
+}
+
+.pf-account-list span {
+  color: var(--pf-muted);
+  font-size: 13px;
+}
+
+.pf-account-list strong {
+  color: var(--pf-text);
+  font-size: 14px;
+}
+
+.pf-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #e2f6ea;
+  color: var(--pf-success) !important;
+  font-size: 13px !important;
+}
+
+.pf-status i {
+  font-size: 7px;
+}
+
+/* PASSWORD */
+.pf-password-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 15px;
+  background: var(--pf-field);
+  border: 1px solid var(--pf-border);
+  border-radius: 12px;
+}
+
+.pf-password-box label {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--pf-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.pf-password-box p {
+  margin: 0;
+  color: var(--pf-text);
+  font-size: 15px;
+  letter-spacing: 3px;
+}
+
+.pf-link-btn {
+  padding: 8px 16px;
+  border: 1px solid #d9d2f6;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--pf-purple);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.pf-link-btn:hover {
+  background: #f1ecff;
+}
+
+/* SAFETY NOTE */
+.pf-note {
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #172554, #5b2fc9);
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(60, 40, 140, 0.25);
+}
+
+.pf-note>i {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ff9ccb;
+  font-size: 17px;
+}
+
+.pf-note h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.pf-note p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* ================================
+   EDIT MODE
+================================ */
+
+.pf-edit-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  border: 1px solid #d6deea;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #172554;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.pf-edit-input:hover {
+  border-color: #b8c5d6;
+}
+
+.pf-edit-input:focus {
+  background: #ffffff;
+  border-color: #2f80ed;
+  box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.08);
+}
+
+
+/* ================================
+   ADDRESS EDIT FIELD
+================================ */
+
+.pf-address-content {
+  width: 100%;
+}
+
+.pf-edit-textarea {
+  width: 100%;
+  min-height: 82px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #d6deea;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #172554;
+  font-size: 15px;
+  font-family: inherit;
+  line-height: 1.5;
+  outline: none;
+  resize: vertical;
+  transition: all 0.2s ease;
+}
+
+.pf-edit-textarea:hover {
+  border-color: #b8c5d6;
+}
+
+.pf-edit-textarea:focus {
+  background: #ffffff;
+  border-color: #2f80ed;
+  box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.08);
+}
+
+
+/* ================================
+   READ ONLY FIELD
+================================ */
+
+.pf-readonly-field {
+  width: 100%;
+  min-height: 30px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 7px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.pf-readonly-field span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-readonly-field i {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+
+/* ================================
+   EDIT / SAVE ACTIONS
+================================ */
+
+.pf-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 9.5px;
+}
+
+.pf-cancel-btn,
+.pf-save-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 9px 15px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+
+/* Cancel */
+
+.pf-cancel-btn {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #dbe3ec;
+}
+
+.pf-cancel-btn:hover {
+  background: #e2e8f0;
+  color: #172554;
+}
+
+
+/* Save */
+
+.pf-save-btn {
+  background: #2f80ed;
+  color: #ffffff;
+  border: 1px solid #2f80ed;
+  box-shadow: 0 4px 10px rgba(47, 128, 237, 0.25);
+}
+
+.pf-save-btn:hover {
+  background: #1d6fd6;
+  border-color: #1d6fd6;
+  transform: translateY(-1px);
+}
+
+.pf-save-btn:disabled,
+.pf-cancel-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+
+/* ================================
+   EDIT PROFILE BUTTON
+================================ */
+
+.pf-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/*change password*/
+.pf-password-form {
+  margin-top: 4px;
+}
+
+.pf-password-field {
+  margin-bottom: 13px;
+}
+
+.pf-password-field label {
+  display: block;
+  margin-bottom: 6px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pf-password-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #d6deea;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #172554;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.pf-password-field input:hover {
+  border-color: #b8c5d6;
+}
+
+.pf-password-field input:focus {
+  background: #ffffff;
+  border-color: #2f80ed;
+  box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.08);
+}
+
+.pf-password-field input::placeholder {
+  color: #94a3b8;
+}
+
+.pf-password-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.pf-password-cancel,
+.pf-password-save {
+  border: none;
+  border-radius: 7px;
+  padding: 9px 13px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pf-password-cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #dbe3ec;
+}
+
+.pf-password-cancel:hover {
+  background: #e2e8f0;
+  color: #172554;
+}
+
+.pf-password-save {
+  background: #2f80ed;
+  color: #ffffff;
+  border: 1px solid #2f80ed;
+}
+
+.pf-password-save:hover {
+  background: #1d6fd6;
+  border-color: #1d6fd6;
+  transform: translateY(-1px);
+}
+
+.pf-password-cancel:disabled,
+.pf-password-save:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 960px) {
+  .pf-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .pf-side {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .pf-hero {
+    padding: 30px 16px 80px;
+  }
+
+  .pf-hero-inner {
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+
+  .pf-photo {
+    width: 100px;
+    height: 100px;
+  }
+
+  .pf-user h1 {
+    font-size: 26px;
+  }
+
+  .pf-edit-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pf-grid-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .pf-container {
+    padding: 0 12px;
+  }
+
+  .pf-card {
+    padding: 18px;
+  }
+
+  .pf-grid,
+  .pf-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .pf-user {
+    flex-basis: calc(100% - 120px);
+  }
+}

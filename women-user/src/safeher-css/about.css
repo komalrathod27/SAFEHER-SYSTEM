@@ -1,0 +1,696 @@
+/* =====================================================
+   SAFEHER ABOUT PAGE
+===================================================== */
+
+.safeher-about {
+  font-family: inherit;
+  color: #172554;
+  background: #ffffff;
+}
+
+.safeher-about * {
+  box-sizing: border-box;
+}
+
+
+/* =====================================================
+   COMMON
+===================================================== */
+
+.safeher-about .about-tag {
+  display: inline-block;
+  margin-bottom: 15px;
+  color: #e83e8c;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+
+/* =====================================================
+   HERO SECTION
+===================================================== */
+
+.safeher-about .about-hero {
+  position: relative;
+  min-height: 620px;
+
+  display: flex;
+  align-items: center;
+
+  /* ADD HERO IMAGE HERE */
+  background-image: url("../assets/images/all-img/about-hero.png");
+  background-size: cover;
+  background-position: center;
+  color: #ffffff;
+}
+
+.safeher-about .about-hero-overlay {
+  position: absolute;
+  inset: 0;
+
+  background: linear-gradient(90deg,
+      rgba(12, 25, 65, 0.92),
+      rgba(23, 37, 84, 0.72),
+      rgba(23, 37, 84, 0.25));
+}
+
+.safeher-about .about-hero .container {
+  position: relative;
+  z-index: 2;
+}
+
+.safeher-about .about-hero-content {
+  max-width: 700px;
+}
+
+.safeher-about .about-hero .about-tag {
+  color: #ffd4e5;
+}
+
+.safeher-about .about-hero h1 {
+  margin-bottom: 25px;
+
+  color: #ffffff;
+
+  font-size: 58px;
+  font-weight: 700;
+  line-height: 1.12;
+}
+
+.safeher-about .about-hero h1 span {
+  color: #ff78aa;
+}
+
+.safeher-about .about-hero p {
+  max-width: 620px;
+  margin-bottom: 32px;
+
+  color: #e8eefc;
+
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+
+/* =====================================================
+   PRIMARY BUTTON
+===================================================== */
+
+.safeher-about .about-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 14px 25px;
+
+  background: #ffffff;
+  color: #172554 !important;
+
+  border-radius: 30px;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+
+  transition: all 0.3s ease;
+}
+
+.safeher-about .about-primary-btn i {
+  color: #e83e8c;
+
+  transition: transform 0.3s ease;
+}
+
+.safeher-about .about-primary-btn:hover {
+  transform: translateY(-3px);
+
+  background: #e83e8c;
+  color: #ffffff !important;
+}
+
+.safeher-about .about-primary-btn:hover i {
+  color: #ffffff;
+
+  transform: translateX(4px);
+}
+
+
+/* =====================================================
+   WHO WE ARE
+===================================================== */
+
+.safeher-about .about-main-section {
+  padding: 100px 0;
+
+  background: #ffffff;
+}
+
+.safeher-about .about-main-content {
+  padding-right: 40px;
+}
+
+.safeher-about .about-main-content h2 {
+  margin-bottom: 22px;
+
+  color: #172554;
+
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.safeher-about .about-main-content h2 span {
+  color: #2f80ed;
+}
+
+.safeher-about .about-main-content p {
+  color: #64748b;
+
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.safeher-about .about-main-content .large-text {
+  color: #334155;
+
+  font-size: 18px;
+  font-weight: 600;
+
+  line-height: 1.7;
+}
+
+
+/* =====================================================
+   CHECK LIST
+===================================================== */
+
+.safeher-about .about-check-list {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 12px;
+
+  margin-top: 25px;
+}
+
+.safeher-about .about-check-list div {
+  color: #475569;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.safeher-about .about-check-list i {
+  margin-right: 8px;
+
+  color: #2f80ed;
+}
+
+
+/* =====================================================
+   WHO WE ARE INFO BOX
+===================================================== */
+
+.safeher-about .about-info-box {
+  padding: 45px 40px;
+
+  background: linear-gradient(135deg,
+      #f3f7ff,
+      #fff5fa);
+
+  border: 1px solid #edf0f7;
+
+  border-radius: 20px;
+
+  box-shadow: 0 15px 35px rgba(31, 45, 95, 0.08);
+}
+
+.safeher-about .about-info-icon {
+  width: 65px;
+  height: 65px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-bottom: 22px;
+
+  background: #ffffff;
+
+  border-radius: 16px;
+
+  box-shadow: 0 8px 20px rgba(31, 45, 95, 0.08);
+}
+
+.safeher-about .about-info-icon i {
+  color: #2f80ed;
+
+  font-size: 27px;
+}
+
+.safeher-about .about-info-box h3 {
+  margin-bottom: 15px;
+
+  color: #172554;
+
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.safeher-about .about-info-box>p {
+  margin-bottom: 30px;
+
+  color: #64748b;
+
+  font-size: 15px;
+
+  line-height: 1.8;
+}
+
+
+/* STATS */
+
+.safeher-about .info-stat-row {
+  display: flex;
+
+  gap: 25px;
+
+  padding-top: 25px;
+
+  border-top: 1px solid #e5e9f2;
+}
+
+.safeher-about .info-stat-row div {
+  flex: 1;
+}
+
+.safeher-about .info-stat-row strong {
+  display: block;
+
+  color: #e83e8c;
+
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.safeher-about .info-stat-row span {
+  display: block;
+
+  margin-top: 3px;
+
+  color: #64748b;
+
+  font-size: 11px;
+}
+
+
+/* =====================================================
+   WHY SAFEHER
+===================================================== */
+
+.safeher-about .why-safeher {
+  padding: 100px 0;
+
+  background: linear-gradient(135deg,
+      #172554,
+      #243b7a);
+
+  color: #ffffff;
+}
+
+.safeher-about .why-content {
+  max-width: 700px;
+
+  margin-bottom: 55px;
+}
+
+.safeher-about .why-content .about-tag {
+  color: #ffd4e5;
+}
+
+.safeher-about .why-content h2 {
+  margin-bottom: 18px;
+
+  color: #ffffff;
+
+  font-size: 43px;
+  font-weight: 700;
+
+  line-height: 1.25;
+}
+
+.safeher-about .why-content h2 span {
+  color: #ff78aa;
+}
+
+.safeher-about .why-content p {
+  color: #dce6f8;
+
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+
+/* =====================================================
+   WHY CARDS
+===================================================== */
+
+.safeher-about .why-card {
+  height: 100%;
+
+  padding: 30px 25px;
+
+  background: rgba(255, 255, 255, 0.08);
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  border-radius: 14px;
+
+  transition: all 0.3s ease;
+}
+
+.safeher-about .why-card:hover {
+  transform: translateY(-8px);
+
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.safeher-about .why-icon {
+  width: 55px;
+  height: 55px;
+
+  margin-bottom: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.12);
+
+  border-radius: 12px;
+}
+
+.safeher-about .why-icon i {
+  color: #ff8ab5;
+
+  font-size: 22px;
+}
+
+.safeher-about .why-card h3 {
+  margin-bottom: 12px;
+
+  color: #ffffff;
+
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.safeher-about .why-card p {
+  margin: 0;
+
+  color: #dce6f8;
+
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+
+/* =====================================================
+   MISSION
+===================================================== */
+
+.safeher-about .mission-section {
+  padding: 100px 0;
+  background: #f7f9ff;
+}
+
+.safeher-about .mission-content {
+  padding-right: 45px;
+}
+
+.safeher-about .mission-content h2 {
+  margin-bottom: 22px;
+  color: #172554;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.safeher-about .mission-content h2 span {
+  color: #e83e8c;
+}
+
+.safeher-about .mission-content p {
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+
+/* MISSION BUTTON */
+
+.safeher-about .mission-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-top: 15px;
+
+  padding: 12px 22px;
+
+  background: #172554;
+  color: #ffffff !important;
+
+  border-radius: 30px;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  transition: all 0.3s ease;
+}
+
+.safeher-about .mission-btn:hover {
+  background: #e83e8c;
+
+  transform: translateY(-2px);
+}
+
+
+/* MISSION IMAGE */
+
+.safeher-about .mission-image {
+  position: relative;
+  min-height: 430px;
+  width: 700px;
+  background-image: url("../assets/images/all-img/safeher-mission2.png");
+  background-size: cover;
+  background-position: center;
+  border-radius: 18px;
+  box-shadow: 0 15px 35px rgba(31, 45, 95, 0.14);
+}
+
+
+/* MISSION BADGE */
+
+.safeher-about .mission-image-badge {
+  position: absolute;
+
+  right: 25px;
+  bottom: 25px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 13px 18px;
+
+  background: #ffffff;
+
+  border-radius: 12px;
+
+  box-shadow: 0 8px 25px rgba(31, 45, 95, 0.15);
+}
+
+.safeher-about .mission-image-badge>i {
+  color: #e83e8c;
+
+  font-size: 22px;
+}
+
+.safeher-about .mission-image-badge span {
+  color: #172554;
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.safeher-about .mission-image-badge small {
+  display: block;
+
+  color: #64748b;
+
+  font-size: 10px;
+  font-weight: 500;
+}
+
+
+/* =====================================================
+   FINAL CTA
+===================================================== */
+
+.safeher-about .about-final-cta {
+  position: relative;
+
+  min-height: 500px;
+
+  display: flex;
+  align-items: center;
+
+  /* ADD CTA IMAGE HERE IF YOU WANT LATER */
+  background-image: url("../assets/images/all-img/safeher-cta.png");
+
+  background-size: cover;
+  background-position: center;
+
+  color: #ffffff;
+}
+
+.safeher-about .cta-overlay {
+  position: absolute;
+  inset: 0;
+
+  background: linear-gradient(90deg,
+      rgba(17, 29, 69, 0.93),
+      rgba(29, 43, 100, 0.72),
+      rgba(29, 43, 100, 0.3));
+}
+
+.safeher-about .about-final-cta .container {
+  position: relative;
+
+  z-index: 2;
+}
+
+.safeher-about .cta-content {
+  max-width: 650px;
+}
+
+.safeher-about .cta-content .about-tag {
+  color: #ffd4e5;
+}
+
+.safeher-about .cta-content h2 {
+  margin-bottom: 20px;
+
+  color: #ffffff;
+
+  font-size: 48px;
+  font-weight: 700;
+
+  line-height: 1.15;
+}
+
+.safeher-about .cta-content h2 span {
+  color: #ff78aa;
+}
+
+.safeher-about .cta-content p {
+  margin-bottom: 30px;
+
+  color: #e1e9f8;
+
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 991px) {
+
+  .safeher-about .about-hero {
+    min-height: 550px;
+  }
+
+  .safeher-about .about-hero h1 {
+    font-size: 45px;
+  }
+
+  .safeher-about .about-main-content {
+    padding-right: 0;
+
+    margin-bottom: 45px;
+  }
+
+  .safeher-about .mission-content {
+    padding-right: 0;
+
+    margin-bottom: 45px;
+  }
+
+  .safeher-about .why-card {
+    margin-bottom: 25px;
+  }
+
+}
+
+
+@media (max-width: 767px) {
+
+  .safeher-about .about-hero {
+    min-height: 500px;
+  }
+
+  .safeher-about .about-hero h1 {
+    font-size: 36px;
+  }
+
+  .safeher-about .about-hero p {
+    font-size: 15px;
+  }
+
+  .safeher-about .about-main-section,
+  .safeher-about .mission-section {
+    padding: 65px 0;
+  }
+
+  .safeher-about .about-main-content h2,
+  .safeher-about .mission-content h2 {
+    font-size: 31px;
+  }
+
+  .safeher-about .about-check-list {
+    grid-template-columns: 1fr;
+  }
+
+  .safeher-about .why-safeher {
+    padding: 65px 0;
+  }
+
+  .safeher-about .why-content h2 {
+    font-size: 32px;
+  }
+
+  .safeher-about .mission-image {
+    min-height: 350px;
+  }
+
+  .safeher-about .about-final-cta {
+    min-height: 450px;
+  }
+
+  .safeher-about .cta-content h2 {
+    font-size: 36px;
+  }
+
+  .safeher-about .info-stat-row {
+    gap: 12px;
+  }
+
+}

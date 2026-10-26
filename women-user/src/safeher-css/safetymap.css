@@ -1,0 +1,1346 @@
+/*SAFEHER SAFETY MAP Professional Safety Intelligence Design */
+.safeher-safety-map {
+  font-family: inherit;
+  color: #172554;
+  background: #ffffff;
+}
+
+.safeher-safety-map * {
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   COMMON
+========================================================= */
+
+.safeher-safety-map .sm-eyebrow {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: #2f80ed;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+}
+
+.safeher-safety-map .sm-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 40px;
+  margin-bottom: 35px;
+}
+
+.safeher-safety-map .sm-section-heading h2 {
+  margin: 0;
+  color: #172554;
+  font-size: 34px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.safeher-safety-map .sm-section-heading p {
+  max-width: 440px;
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+
+/* =========================================================
+   HERO
+========================================================= */
+
+.safeher-safety-map .sm-hero {
+  position: relative;
+  min-height: 410px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+
+  background:
+    linear-gradient(90deg,
+      rgba(14, 27, 67, 0.80),
+      rgba(23, 37, 84, 0.15)),
+    url("/assets/images/all-img/safety-map-hero2.png") center center / cover no-repeat;
+}
+
+.safeher-safety-map .sm-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 75% 40%,
+      rgba(47, 128, 237, 0.18),
+      transparent 35%);
+}
+
+.safeher-safety-map .sm-hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 690px;
+  padding: 75px 0;
+}
+
+.safeher-safety-map .sm-hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 20px;
+  padding: 9px 15px;
+
+  color: #dbeafe;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.safeher-safety-map .sm-hero-tag i {
+  color: #ff7aa8;
+}
+
+.safeher-safety-map .sm-hero h1 {
+  margin: 0 0 20px;
+  color: #ffffff;
+  font-size: 58px;
+  line-height: 1.08;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+}
+
+.safeher-safety-map .sm-hero h1 span {
+  display: inline;
+  color: #ff8db5;
+}
+
+.safeher-safety-map .sm-hero p {
+  max-width: 600px;
+  margin: 0 0 25px;
+  color: #d8e1f0;
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+.safeher-safety-map .sm-hero-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.safeher-safety-map .sm-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #31c48d;
+  box-shadow: 0 0 0 5px rgba(49, 196, 141, 0.12);
+}
+
+.safeher-safety-map .sm-status-divider {
+  width: 1px;
+  height: 15px;
+  margin: 0 4px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+
+/* =========================================================
+   INTELLIGENCE SECTION
+========================================================= */
+
+.safeher-safety-map .sm-intelligence-section {
+  padding: 85px 0;
+  background: #f7f9fc;
+}
+
+
+/* =========================================================
+   MAP LAYOUT
+========================================================= */
+
+.safeher-safety-map .sm-map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 0.75fr);
+  gap: 25px;
+}
+
+
+/* =========================================================
+   MAP CARD
+========================================================= */
+
+.safeher-safety-map .sm-map-card {
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e5eaf2;
+  border-radius: 12px;
+  box-shadow: 0 15px 45px rgba(23, 37, 84, 0.08);
+}
+
+
+/* =========================================================
+   SEARCH BAR
+========================================================= */
+
+.safeher-safety-map .sm-map-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.safeher-safety-map .sm-location-search {
+  flex: 1;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 15px;
+  background: #f7f9fc;
+  border: 1px solid #e5eaf2;
+  border-radius: 7px;
+}
+
+.safeher-safety-map .sm-location-search i {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.safeher-safety-map .sm-location-search input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #172554;
+  font-size: 14px;
+}
+
+.safeher-safety-map .sm-location-search input::placeholder {
+  color: #94a3b8;
+}
+
+.safeher-safety-map .sm-search-btn {
+  height: 46px;
+  padding: 0 23px;
+  border: none;
+  border-radius: 7px;
+  background: #172554;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.safeher-safety-map .sm-search-btn:hover {
+  background: #2f80ed;
+}
+
+
+.sm-search-validation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 9px 12px;
+  color: #dc2626;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sm-search-validation i {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+
+/* =========================================================
+   PROFESSIONAL MAP
+========================================================= */
+
+.safeher-safety-map .sm-map {
+  position: relative;
+  height: 550px;
+  overflow: hidden;
+  background: #dfe8e2;
+}
+
+.safeher-safety-map .sm-map .leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.safeher-safety-map .sm-my-location-control {
+  z-index: 1000;
+  margin-bottom: 12px;
+  margin-right: 12px;
+}
+
+.safeher-safety-map .sm-my-location-control .sm-location-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 15px;
+  border: 1px solid #1d4ed8;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(23, 37, 84, 0.28);
+  transition:
+    background-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.safeher-safety-map .sm-my-location-control .sm-location-button:hover {
+  background: #1d4ed8;
+  border-color: #1e40af;
+  color: #ffffff;
+  box-shadow: 0 7px 18px rgba(23, 37, 84, 0.36);
+  transform: translateY(-2px);
+}
+
+.safeher-safety-map .sm-my-location-control .sm-location-button i {
+  transition: transform 0.18s ease;
+}
+
+.safeher-safety-map .sm-my-location-control .sm-location-button:hover i {
+  transform: scale(1.12);
+}
+
+.safeher-safety-map .sm-my-location-control .sm-location-button:active {
+  box-shadow: 0 2px 6px rgba(23, 37, 84, 0.25);
+  transform: translateY(0);
+}
+
+.safeher-safety-map .sm-my-location-control .sm-location-button:focus-visible {
+  outline: 3px solid rgba(96, 165, 250, 0.65);
+  outline-offset: 2px;
+}
+
+
+/* MAP BASE */
+
+.safeher-safety-map .sm-map-background {
+  position: absolute;
+  inset: 0;
+  background-color: #e4ebe6;
+  background-image:
+    linear-gradient(32deg,
+      transparent 46%,
+      rgba(255, 255, 255, 0.95) 47%,
+      rgba(255, 255, 255, 0.95) 49%,
+      transparent 50%),
+    linear-gradient(118deg,
+      transparent 46%,
+      rgba(255, 255, 255, 0.95) 47%,
+      rgba(255, 255, 255, 0.95) 49%,
+      transparent 50%),
+    linear-gradient(90deg,
+      transparent 48%,
+      rgba(255, 255, 255, 0.8) 49%,
+      rgba(255, 255, 255, 0.8) 51%,
+      transparent 52%);
+
+  background-size:
+    150px 150px,
+    190px 190px,
+    210px 210px;
+}
+
+
+/* MAIN ROADS */
+
+.safeher-safety-map .sm-map-background::before,
+.safeher-safety-map .sm-map-background::after {
+  content: "";
+  position: absolute;
+  background: #ffffff;
+  opacity: 0.95;
+}
+
+.safeher-safety-map .sm-map-background::before {
+  width: 100%;
+  height: 10px;
+  top: 48%;
+  left: 0;
+  transform: rotate(-7deg);
+  box-shadow: 0 1px 0 #cfd8d2;
+}
+
+.safeher-safety-map .sm-map-background::after {
+  width: 10px;
+  height: 100%;
+  left: 56%;
+  top: 0;
+  transform: rotate(10deg);
+  box-shadow: 1px 0 0 #cfd8d2;
+}
+
+
+/* PARKS */
+
+.safeher-safety-map .sm-map-park {
+  position: absolute;
+  background: #c6dfca;
+  border: 1px solid #b1d2b7;
+  opacity: 0.8;
+}
+
+.safeher-safety-map .park-one {
+  width: 150px;
+  height: 105px;
+  top: 70px;
+  left: 70px;
+  border-radius: 45% 55% 40% 60%;
+}
+
+.safeher-safety-map .park-two {
+  width: 180px;
+  height: 125px;
+  right: 70px;
+  bottom: 60px;
+  border-radius: 55% 45% 60% 40%;
+}
+
+
+/* MAP LABELS */
+
+.safeher-safety-map .sm-map-label {
+  position: absolute;
+  color: #68756d;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.safeher-safety-map .label-one {
+  top: 95px;
+  left: 47%;
+}
+
+.safeher-safety-map .label-two {
+  top: 130px;
+  left: 14%;
+}
+
+.safeher-safety-map .label-three {
+  top: 48%;
+  right: 12%;
+}
+
+.safeher-safety-map .label-four {
+  bottom: 26%;
+  left: 17%;
+}
+
+.safeher-safety-map .label-five {
+  bottom: 13%;
+  right: 31%;
+}
+
+
+/* =========================================================
+   MAP MARKERS
+========================================================= */
+
+.safeher-safety-map .sm-map-marker {
+  position: absolute;
+  z-index: 10;
+  cursor: pointer;
+}
+
+.safeher-safety-map .sm-marker-icon {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+
+  color: #ffffff;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+
+  transition: transform 0.25s ease;
+}
+
+.safeher-safety-map .sm-map-marker:hover .sm-marker-icon {
+  transform: scale(1.12);
+}
+
+.safeher-safety-map .safe .sm-marker-icon {
+  background: #21a46d;
+}
+
+.safeher-safety-map .caution .sm-marker-icon {
+  background: #d99a18;
+}
+
+.safeher-safety-map .incident .sm-marker-icon {
+  background: #e05287;
+}
+
+.safeher-safety-map .sm-marker-info {
+  position: absolute;
+  left: 50px;
+  top: 0;
+
+  min-width: 150px;
+  padding: 9px 12px;
+
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #e5eaf2;
+  border-radius: 6px;
+
+  box-shadow: 0 8px 22px rgba(23, 37, 84, 0.13);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-6px);
+
+  transition: 0.25s ease;
+}
+
+.safeher-safety-map .sm-map-marker:hover .sm-marker-info {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.safeher-safety-map .sm-marker-info strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #172554;
+  font-size: 12px;
+}
+
+.safeher-safety-map .sm-marker-info span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+
+/* MARKER POSITIONS */
+
+.safeher-safety-map .marker-one {
+  top: 27%;
+  left: 31%;
+}
+
+.safeher-safety-map .marker-two {
+  top: 51%;
+  left: 65%;
+}
+
+.safeher-safety-map .marker-three {
+  top: 37%;
+  left: 52%;
+}
+
+.safeher-safety-map .marker-four {
+  bottom: 19%;
+  right: 22%;
+}
+
+
+/* SAFE PULSE */
+
+.safeher-safety-map .sm-marker-pulse {
+  position: absolute;
+  width: 58px;
+  height: 58px;
+  top: -8px;
+  left: -8px;
+
+  border-radius: 50%;
+  background: rgba(33, 164, 109, 0.18);
+
+  animation: smPulse 2s infinite;
+}
+
+@keyframes smPulse {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.8;
+  }
+
+  70% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+
+/* =========================================================
+   CURRENT LOCATION
+========================================================= */
+/* 
+.safeher-safety-map .sm-current-location {
+  position: absolute;
+  z-index: 12;
+  top: 52%;
+  left: 43%;
+
+  width: 22px;
+  height: 22px;
+}
+
+.safeher-safety-map .current-ring {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: rgba(47, 128, 237, 0.18);
+}
+
+.safeher-safety-map .current-dot {
+  position: absolute;
+  inset: 4px;
+
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  background: #2f80ed;
+
+  box-shadow: 0 2px 10px rgba(47, 128, 237, 0.4);
+} */
+
+
+/* =========================================================
+   MAP CONTROLS
+========================================================= */
+
+.safeher-safety-map .sm-map-controls {
+  position: absolute;
+  z-index: 20;
+  top: 20px;
+  right: 20px;
+
+  display: flex;
+  flex-direction: column;
+
+  background: #ffffff;
+  border: 1px solid #e2e7ee;
+  border-radius: 6px;
+  overflow: hidden;
+
+  box-shadow: 0 5px 18px rgba(23, 37, 84, 0.12);
+}
+
+.safeher-safety-map .sm-map-controls button {
+  width: 42px;
+  height: 42px;
+
+  border: none;
+  border-bottom: 1px solid #e8ecf1;
+  background: #ffffff;
+
+  color: #172554;
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.safeher-safety-map .sm-map-controls button:last-child {
+  border-bottom: none;
+}
+
+.safeher-safety-map .sm-map-controls button:hover {
+  color: #2f80ed;
+  background: #f5f8ff;
+}
+
+
+/* =========================================================
+   MY LOCATION
+========================================================= */
+
+.safeher-safety-map .sm-location-button {
+  position: absolute;
+  z-index: 20;
+  right: 20px;
+  bottom: 20px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px 14px;
+
+  border: 1px solid #e2e7ee;
+  border-radius: 6px;
+
+  background: #ffffff;
+  color: #172554;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  box-shadow: 0 5px 18px rgba(23, 37, 84, 0.12);
+  cursor: pointer;
+}
+
+.safeher-safety-map .sm-location-button:hover {
+  color: #2f80ed;
+}
+
+
+/* =========================================================
+   MAP LEGEND
+========================================================= */
+
+.safeher-safety-map .sm-map-legend {
+  position: absolute;
+  z-index: 20;
+  left: 20px;
+  bottom: 20px;
+
+  min-width: 155px;
+  padding: 13px 15px;
+
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #e2e7ee;
+  border-radius: 6px;
+
+  box-shadow: 0 5px 18px rgba(23, 37, 84, 0.1);
+}
+
+.safeher-safety-map .legend-heading {
+  margin-bottom: 9px;
+  color: #172554;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.safeher-safety-map .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+
+  color: #64748b;
+  font-size: 11px;
+}
+
+.safeher-safety-map .legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.safeher-safety-map .safe-dot {
+  background: #21a46d;
+}
+
+.safeher-safety-map .caution-dot {
+  background: #d99a18;
+}
+
+.safeher-safety-map .incident-dot {
+  background: #e05287;
+}
+
+
+/* =========================================================
+   DEMO LABEL
+========================================================= */
+
+.safeher-safety-map .sm-demo-label {
+  position: absolute;
+  z-index: 20;
+  top: 20px;
+  left: 20px;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 7px 10px;
+
+  background: rgba(23, 37, 84, 0.88);
+  color: #ffffff;
+
+  border-radius: 4px;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   AREA STATUS CARD
+========================================================= */
+.safeher-safety-map .sm-status-card {
+  padding: 27px;
+  background: #ffffff;
+  border: 1px solid #e5eaf2;
+  border-radius: 12px;
+  box-shadow: 0 15px 45px rgba(23, 37, 84, 0.06);
+  margin-bottom: auto;
+}
+
+.safeher-safety-map .sm-status-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+.safeher-safety-map .sm-status-header h3 {
+  margin: 0;
+  color: #172554;
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.safeher-safety-map .sm-status-live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #21a46d;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.safeher-safety-map .sm-status-live span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #21a46d;
+}
+
+
+/* STATUS ITEMS */
+.safeher-safety-map .sm-status-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 0;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.safeher-safety-map .sm-status-icon {
+  width: 43px;
+  height: 43px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.safeher-safety-map .safe-status-icon {
+  color: #21a46d;
+  background: #eaf8f1;
+}
+
+.safeher-safety-map .caution-status-icon {
+  color: #d99a18;
+  background: #fff6df;
+}
+
+.safeher-safety-map .incident-status-icon {
+  color: #e05287;
+  background: #fff0f5;
+}
+
+.safeher-safety-map .sm-status-content {
+  flex: 1;
+}
+
+.safeher-safety-map .sm-status-content strong {
+  display: block;
+  color: #172554;
+  font-size: 21px;
+  line-height: 1;
+}
+
+.safeher-safety-map .sm-status-content span {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.safeher-safety-map .sm-status-item>i {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+
+/* STATUS MESSAGE */
+
+.safeher-safety-map .sm-status-message {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 15px;
+  background: #f4f7ff;
+  border-left: 3px solid #2f80ed;
+}
+
+.safeher-safety-map .sm-status-message-icon {
+  color: #2f80ed;
+  font-size: 18px;
+}
+
+.safeher-safety-map .sm-status-message strong {
+  color: #172554;
+  font-size: 12px;
+}
+
+.safeher-safety-map .sm-status-message p {
+  margin: 1px 0 0;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+
+/* =========================================================
+   RECENT REPORTS
+========================================================= */
+/* 
+.safeher-safety-map .sm-reports-section {
+  padding: 85px 0;
+  background: #ffffff;
+}
+
+.safeher-safety-map .sm-reports-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+.safeher-safety-map .sm-report-card {
+  padding: 22px;
+
+  background: #ffffff;
+  border: 1px solid #e5eaf2;
+  border-radius: 10px;
+
+  transition: 0.3s ease;
+}
+
+.safeher-safety-map .sm-report-card:hover {
+  transform: translateY(-4px);
+  border-color: #cfd8ea;
+  box-shadow: 0 12px 30px rgba(23, 37, 84, 0.08);
+}
+
+.safeher-safety-map .sm-report-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 20px;
+}
+
+.safeher-safety-map .sm-report-icon {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+}
+
+.safeher-safety-map .incident-report {
+  color: #e05287;
+  background: #fff0f5;
+}
+
+.safeher-safety-map .caution-report {
+  color: #d99a18;
+  background: #fff6df;
+}
+
+.safeher-safety-map .safe-report {
+  color: #21a46d;
+  background: #eaf8f1;
+}
+
+.safeher-safety-map .sm-report-badge {
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.safeher-safety-map .incident-badge {
+  color: #c63f70;
+  background: #fff0f5;
+}
+
+.safeher-safety-map .caution-badge {
+  color: #aa7511;
+  background: #fff6df;
+}
+
+.safeher-safety-map .safe-badge {
+  color: #168057;
+  background: #eaf8f1;
+}
+
+.safeher-safety-map .sm-report-card h3 {
+  margin: 0 0 8px;
+  color: #172554;
+  font-size: 17px;
+}
+
+.safeher-safety-map .sm-report-card p {
+  min-height: 48px;
+  margin: 0;
+
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.safeher-safety-map .sm-report-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-top: 18px;
+  padding-top: 13px;
+
+  border-top: 1px solid #edf0f5;
+
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.safeher-safety-map .sm-report-footer span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #64748b;
+} */
+
+
+/* =========================================================
+   SAFETY AWARENESS
+========================================================= */
+
+.safeher-safety-map .sm-awareness-section {
+  padding: 0 0 85px;
+  background: #ffffff;
+}
+
+.safeher-safety-map .sm-awareness {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  gap: 22px;
+
+  padding: 32px 38px;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(105deg,
+      #172554,
+      #213b80);
+
+  border-radius: 12px;
+}
+
+.safeher-safety-map .sm-awareness::after {
+  content: "";
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  right: -80px;
+  top: -130px;
+
+  border-radius: 50%;
+  border: 45px solid rgba(255, 255, 255, 0.04);
+}
+
+.safeher-safety-map .sm-awareness-icon {
+  position: relative;
+  z-index: 2;
+
+  width: 62px;
+  height: 62px;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+
+  font-size: 25px;
+}
+
+.safeher-safety-map .sm-awareness-content {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+}
+
+.safeher-safety-map .sm-awareness-content>span {
+  color: #ff9bbc;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+}
+
+.safeher-safety-map .sm-awareness-content h2 {
+  margin: 5px 0 7px;
+
+  color: #ffffff;
+  font-size: 23px;
+}
+
+.safeher-safety-map .sm-awareness-content p {
+  max-width: 800px;
+  margin: 0;
+
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.safeher-safety-map .sm-awareness-arrow {
+  position: relative;
+  z-index: 2;
+
+  width: 43px;
+  height: 43px;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+
+  color: #ffffff;
+}
+
+
+.sm-real-marker {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.safe-marker {
+  background: #16a34a;
+}
+
+.caution-marker {
+  background: #f59e0b;
+}
+
+.safeher-map-icon {
+  background: transparent;
+  border: none;
+}
+
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1199px) {
+
+  .safeher-safety-map .sm-hero h1 {
+    font-size: 50px;
+  }
+
+  .safeher-safety-map .sm-map-layout {
+    grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.8fr);
+  }
+
+  .safeher-safety-map .sm-reports-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+}
+
+
+@media (max-width: 991px) {
+
+  .safeher-safety-map .sm-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .safeher-safety-map .sm-map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .safeher-safety-map .sm-map {
+    height: 500px;
+  }
+
+  .safeher-safety-map .sm-status-card {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+  }
+
+  .safeher-safety-map .sm-status-header {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+  }
+
+  .safeher-safety-map .sm-status-item {
+    border: 1px solid #edf0f5;
+    padding: 15px;
+    border-radius: 8px;
+  }
+
+  .safeher-safety-map .sm-status-message {
+    grid-column: 1 / -1;
+  }
+
+}
+
+
+@media (max-width: 767px) {
+
+  .safeher-safety-map .sm-hero {
+    min-height: 360px;
+  }
+
+  .safeher-safety-map .sm-hero-content {
+    padding: 60px 0;
+  }
+
+  .safeher-safety-map .sm-hero h1 {
+    font-size: 40px;
+  }
+
+  .safeher-safety-map .sm-hero p {
+    font-size: 14px;
+  }
+
+  .safeher-safety-map .sm-intelligence-section,
+  .safeher-safety-map .sm-reports-section {
+    padding: 60px 0;
+  }
+
+  .safeher-safety-map .sm-section-heading h2 {
+    font-size: 28px;
+  }
+
+  .safeher-safety-map .sm-map-topbar {
+    flex-direction: column;
+  }
+
+  .safeher-safety-map .sm-location-search,
+  .safeher-safety-map .sm-search-btn {
+    width: 100%;
+  }
+
+  .safeher-safety-map .sm-map {
+    height: 450px;
+  }
+
+  .safeher-safety-map .sm-status-card {
+    display: block;
+  }
+
+  .safeher-safety-map .sm-status-item {
+    border-bottom: 1px solid #edf0f5;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    border-radius: 0;
+  }
+
+  .safeher-safety-map .sm-reports-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .safeher-safety-map .sm-awareness {
+    align-items: flex-start;
+    padding: 25px;
+  }
+
+  .safeher-safety-map .sm-awareness-arrow {
+    display: none;
+  }
+
+}
+
+
+@media (max-width: 480px) {
+
+  .safeher-safety-map .sm-hero h1 {
+    font-size: 34px;
+  }
+
+  .safeher-safety-map .sm-hero-status {
+    flex-wrap: wrap;
+  }
+
+  .safeher-safety-map .sm-map {
+    height: 400px;
+  }
+
+  .safeher-safety-map .sm-map-legend {
+    left: 10px;
+    bottom: 10px;
+  }
+
+  .safeher-safety-map .sm-location-button {
+    right: 10px;
+    bottom: 10px;
+  }
+
+  .safeher-safety-map .sm-map-controls {
+    right: 10px;
+    top: 10px;
+  }
+
+  .safeher-safety-map .sm-demo-label {
+    left: 10px;
+    top: 10px;
+  }
+
+  .safeher-safety-map .sm-awareness {
+    flex-direction: column;
+  }
+
+}
