@@ -1351,6 +1351,40 @@ app.put("/api/updatevolunteerprofile/:_id", async (req, res) => {
       });
     }
 
+    // Check whether profile details actually changed for activity history
+    const profileFields = {
+      name: name.trim(),
+      contact_no: contact_no.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      pincode: pincode.trim(),
+      address: address.trim(),
+      qualification: qualification.trim(),
+      serviceArea: serviceArea.trim(),
+      reason: reason.trim(),
+    };
+
+    const changedFields = Object.keys(profileFields)
+      .filter(
+        (field) =>
+          String(volunteerData[field] ?? "").trim() !== profileFields[field],
+      )
+      .map((field) => {
+        const fieldNames = {
+          name: "Name",
+          contact_no: "Contact Number",
+          city: "City",
+          state: "State",
+          pincode: "Pincode",
+          address: "Address",
+          qualification: "Qualification",
+          serviceArea: "Service Area",
+          reason: "Reason",
+        };
+
+        return `${fieldNames[field]} updated to ${profileFields[field]}`;
+      });
+
     // Update only editable fields
     volunteerData.name = name.trim();
     volunteerData.contact_no = contact_no.trim();
@@ -1363,6 +1397,15 @@ app.put("/api/updatevolunteerprofile/:_id", async (req, res) => {
     volunteerData.reason = reason.trim();
 
     await volunteerData.save();
+    // Log profile changes only when details actually changed
+    if (changedFields.length > 0) {
+      await volunteerActivity.create({
+        volunteerId: String(volunteerData._id),
+        type: "PROFILE_UPDATED",
+        title: "Profile Updated",
+        description: changedFields.join(", ") + ".",
+      });
+    }
     res.status(200).json({
       message: "Profile updated successfully.",
       volunteer: volunteerData,
@@ -1481,6 +1524,36 @@ app.put("/api/updatevolunteerpassword/:user_id", async (req, res) => {
     res.status(500).send({
       status: "Error",
       message: "Unable to update password",
+    });
+  }
+});
+
+/* Get Volunteer Activity History */
+app.get("/api/volunteer-activity/:volunteerId", async (req, res) => {
+  try {
+    const { volunteerId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(volunteerId)) {
+      return res.status(400).json({
+        message: "Invalid volunteer ID.",
+      });
+    }
+
+    const activities = await volunteerActivity
+      .find({ volunteerId })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .select("type title description createdAt");
+
+    return res.status(200).json({
+      message: "Activity history fetched successfully.",
+      activities,
+    });
+  } catch (error) {
+    console.error("Volunteer activity history error:", error);
+
+    return res.status(500).json({
+      message: "Failed to fetch activity history.",
     });
   }
 });
@@ -1945,6 +2018,47 @@ const badgeAchievement = mongoose.model(
     },
     earnedAt: { type: Date, required: true, default: Date.now },
   }).index({ volunteerId: 1, badgeKey: 1 }, { unique: true }),
+);
+
+// Volunteer Activity History Model
+const volunteerActivity = mongoose.model(
+  "volunteerActivity",
+  new mongoose.Schema(
+    {
+      volunteerId: {
+        type: String,
+        required: true,
+        index: true,
+      },
+      type: {
+        type: String,
+        required: true,
+        enum: [
+          "BADGE_EARNED",
+          "VOLUNTEER_MILESTONE",
+          "TRUST_SCORE_MILESTONE",
+          "PROFILE_UPDATED",
+        ],
+      },
+      title: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      description: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+    {
+      versionKey: false,
+    },
+  ).index({ volunteerId: 1, createdAt: -1 }),
 );
 
 // ==========================================
@@ -2864,6 +2978,14 @@ app.get("/api/sos/trust-score/:volunteerId", async (req, res) => {
   }
 });
 
+const badgeDisplayNames = {
+  "helping-hand": "Helping Hand",
+  "fast-responder": "Fast Responder",
+  "emergency-champion": "Emergency Champion",
+  "consistent-guardian": "Consistent Guardian",
+  "trusted-volunteer": "Trusted Volunteer",
+};
+
 //Helper for volunteer badges
 async function updateVolunteerBadges(volunteerId) {
   const id = String(volunteerId || "").trim();
@@ -2885,6 +3007,48 @@ async function updateVolunteerBadges(volunteerId) {
 
   // 1. Helping Hand and 3. Emergency Champion
   const resolvedCount = resolved.length;
+
+  // Volunteer Milestones for activity history
+  const milestones = [
+    {
+      count: 1,
+      title: "First SOS Resolved",
+      description: "You successfully resolved your first SOS request.",
+    },
+    {
+      count: 5,
+      title: "5 SOS Requests Resolved",
+      description: "You have successfully resolved 5 SOS requests.",
+    },
+    {
+      count: 10,
+      title: "10 SOS Requests Resolved",
+      description: "You have successfully resolved 10 SOS requests.",
+    },
+    {
+      count: 25,
+      title: "25 SOS Requests Resolved",
+      description: "You have successfully resolved 25 SOS requests.",
+    },
+  ];
+
+  for (const milestone of milestones) {
+    if (resolvedCount >= milestone.count) {
+      const existingMilestone = await volunteerActivity.findOne({
+        volunteerId: id,
+        type: "VOLUNTEER_MILESTONE",
+      });
+
+      if (!existingMilestone) {
+        await volunteerActivity.create({
+          volunteerId: id,
+          type: "VOLUNTEER_MILESTONE",
+          title: milestone.title,
+          description: milestone.description,
+        });
+      }
+    }
+  }
 
   // 2. Fast Responder — same average calculation as Trust Score.
   const responseTimes = requests
@@ -2909,6 +3073,28 @@ async function updateVolunteerBadges(volunteerId) {
   // 5. Trusted Volunteer — reuse the existing Trust Score API logic.
   const trustScoreData = await calculateVolunteerTrustScore(id);
   const trustScore = trustScoreData.trustScore;
+
+  // Trust Score Milestones for acitivity history
+  const trustMilestones = [50, 70, 80, 90];
+
+  for (const milestone of trustMilestones) {
+    if (trustScore >= milestone) {
+      const existingMilestone = await volunteerActivity.findOne({
+        volunteerId: id,
+        type: "TRUST_SCORE_MILESTONE",
+      });
+
+      if (!existingMilestone) {
+        await volunteerActivity.create({
+          volunteerId: id,
+          type: "TRUST_SCORE_MILESTONE",
+          title: `Trust Score ${milestone} Achieved`,
+          description: `Your Trust Score has reached ${milestone} or higher.`,
+        });
+      }
+    }
+  }
+
   const eligibleBadges = [];
   if (resolvedCount >= 1) {
     eligibleBadges.push("helping-hand");
@@ -2926,19 +3112,27 @@ async function updateVolunteerBadges(volunteerId) {
     eligibleBadges.push("trusted-volunteer");
   }
 
-  // Insert only newly earned badges; never overwrite earnedAt.
+  // Insert only newly earned badges and log their activity.
   for (const badgeKey of eligibleBadges) {
-    await badgeAchievement.updateOne(
-      { volunteerId: id, badgeKey },
-      {
-        $setOnInsert: {
-          volunteerId: id,
-          badgeKey,
-          earnedAt: new Date(),
-        },
-      },
-      { upsert: true },
-    );
+    const existingBadge = await badgeAchievement.findOne({
+      volunteerId: id,
+      badgeKey,
+    });
+
+    if (!existingBadge) {
+      await badgeAchievement.create({
+        volunteerId: id,
+        badgeKey,
+        earnedAt: new Date(),
+      });
+
+      await volunteerActivity.create({
+        volunteerId: id,
+        type: "BADGE_EARNED",
+        title: `${badgeDisplayNames[badgeKey]} Badge Earned`,
+        description: `You earned the ${badgeDisplayNames[badgeKey]} badge.`,
+      });
+    }
   }
 
   return {

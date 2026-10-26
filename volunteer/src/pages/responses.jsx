@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { getVolunteerId } from "../utils/volunteerIdentity";
 
 function Responses() {
   const [responses, setResponses] = useState([]);
@@ -12,8 +13,7 @@ function Responses() {
   useEffect(() => {
     const fetchResponses = async () => {
       try {
-        const data = JSON.parse(localStorage.getItem("mydata") || "{}");
-        const volunteerId = data.user_id || data._id;
+        const volunteerId = getVolunteerId();
 
         if (!volunteerId) {
           setError("Please log in again to view your responses.");
@@ -274,11 +274,11 @@ function Responses() {
                           style={{
                             ...styles.statusBadge,
                             backgroundColor:
-                              response.status === "Resolved"
+                              response.displayStatus === "Resolved"
                                 ? "#dcfce7"
                                 : "#fee2e2",
                             color:
-                              response.status === "Resolved"
+                              response.displayStatus === "Resolved"
                                 ? "#166534"
                                 : "#991b1b",
                             fontSize: "12px",
@@ -291,9 +291,7 @@ function Responses() {
                             lineHeight: 1.4,
                           }}
                         >
-                          {response.status === "Pending"
-                            ? "Rejected"
-                            : response.status}
+                          {response.displayStatus}
                         </span>
                       </td>
                       <td style={styles.td}>
@@ -312,7 +310,7 @@ function Responses() {
                       colSpan="6"
                       style={{ ...styles.td, textAlign: "center" }}
                     >
-                      No resolved responses found.
+                      No responses found for the selected filters.
                     </td>
                   </tr>
                 )}
@@ -343,7 +341,7 @@ function Responses() {
               <strong>Requested:</strong>{" "}
               {formatDate(selectedResponse.createdAt)}
             </p>
-            {selectedResponse.status === "Resolved" && (
+            {selectedResponse.displayStatus === "Resolved" && (
               <>
                 <p>
                   <strong>Accepted:</strong>{" "}
@@ -357,9 +355,7 @@ function Responses() {
             )}
             <p>
               <strong>Status:</strong>{" "}
-              {selectedResponse.status === "Pending"
-                ? "Rejected"
-                : selectedResponse.status}
+              {selectedResponse.displayStatus}
             </p>
             <button
               style={styles.button}
