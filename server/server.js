@@ -1925,6 +1925,51 @@ const badgeAchievement = mongoose.model(
   }).index({ volunteerId: 1, badgeKey: 1 }, { unique: true }),
 );
 
+// Volunteer Activity History Model
+const volunteerActivity = mongoose.model(
+  "volunteerActivity",
+  new mongoose.Schema(
+    {
+      volunteerId: {
+        type: String,
+        required: true,
+        index: true,
+      },
+      type: {
+        type: String,
+        required: true,
+        enum: [
+          "BADGE_EARNED",
+          "VOLUNTEER_MILESTONE",
+          "TRUST_SCORE_MILESTONE",
+          "PROFILE_UPDATED",
+        ],
+      },
+      title: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      description: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+      referenceId: {
+        type: String,
+        default: null,
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+    {
+      versionKey: false,
+    },
+  ).index({ volunteerId: 1, createdAt: -1 }),
+);
+
 // ==========================================
 // SOCKET.IO REAL-TIME EVENT SETUP
 // ==========================================
@@ -2713,6 +2758,14 @@ app.get("/api/sos/trust-score/:volunteerId", async (req, res) => {
   }
 });
 
+const badgeDisplayNames = {
+  "helping-hand": "Helping Hand",
+  "fast-responder": "Fast Responder",
+  "emergency-champion": "Emergency Champion",
+  "consistent-guardian": "Consistent Guardian",
+  "trusted-volunteer": "Trusted Volunteer",
+};
+
 //Helper for volunteer badges
 async function updateVolunteerBadges(volunteerId) {
   const id = String(volunteerId || "").trim();
@@ -2734,6 +2787,50 @@ async function updateVolunteerBadges(volunteerId) {
 
   // 1. Helping Hand and 3. Emergency Champion
   const resolvedCount = resolved.length;
+
+  // Volunteer Milestones for activity history
+  const milestones = [
+    {
+      count: 1,
+      title: "First SOS Resolved",
+      description: "You successfully resolved your first SOS request.",
+    },
+    {
+      count: 5,
+      title: "5 SOS Requests Resolved",
+      description: "You have successfully resolved 5 SOS requests.",
+    },
+    {
+      count: 10,
+      title: "10 SOS Requests Resolved",
+      description: "You have successfully resolved 10 SOS requests.",
+    },
+    {
+      count: 25,
+      title: "25 SOS Requests Resolved",
+      description: "You have successfully resolved 25 SOS requests.",
+    },
+  ];
+
+  for (const milestone of milestones) {
+    if (resolvedCount >= milestone.count) {
+      const existingMilestone = await volunteerActivity.findOne({
+        volunteerId: id,
+        type: "VOLUNTEER_MILESTONE",
+        referenceId: `resolved-${milestone.count}`,
+      });
+
+      if (!existingMilestone) {
+        await volunteerActivity.create({
+          volunteerId: id,
+          type: "VOLUNTEER_MILESTONE",
+          title: milestone.title,
+          description: milestone.description,
+          referenceId: `resolved-${milestone.count}`,
+        });
+      }
+    }
+  }
 
   // 2. Fast Responder — same average calculation as Trust Score.
   const responseTimes = requests
@@ -2758,6 +2855,30 @@ async function updateVolunteerBadges(volunteerId) {
   // 5. Trusted Volunteer — reuse the existing Trust Score API logic.
   const trustScoreData = await calculateVolunteerTrustScore(id);
   const trustScore = trustScoreData.trustScore;
+
+  // Trust Score Milestones for acitivity history
+  const trustMilestones = [50, 70, 80, 90];
+
+  for (const milestone of trustMilestones) {
+    if (trustScore >= milestone) {
+      const existingMilestone = await volunteerActivity.findOne({
+        volunteerId: id,
+        type: "TRUST_SCORE_MILESTONE",
+        referenceId: `trust-score-${milestone}`,
+      });
+
+      if (!existingMilestone) {
+        await volunteerActivity.create({
+          volunteerId: id,
+          type: "TRUST_SCORE_MILESTONE",
+          title: `Trust Score ${milestone} Achieved`,
+          description: `Your Trust Score has reached ${milestone} or higher.`,
+          referenceId: `trust-score-${milestone}`,
+        });
+      }
+    }
+  }
+  
   const eligibleBadges = [];
   if (resolvedCount >= 1) {
     eligibleBadges.push("helping-hand");
@@ -2775,19 +2896,28 @@ async function updateVolunteerBadges(volunteerId) {
     eligibleBadges.push("trusted-volunteer");
   }
 
-  // Insert only newly earned badges; never overwrite earnedAt.
+  // Insert only newly earned badges and log their activity.
   for (const badgeKey of eligibleBadges) {
-    await badgeAchievement.updateOne(
-      { volunteerId: id, badgeKey },
-      {
-        $setOnInsert: {
-          volunteerId: id,
-          badgeKey,
-          earnedAt: new Date(),
-        },
-      },
-      { upsert: true },
-    );
+    const existingBadge = await badgeAchievement.findOne({
+      volunteerId: id,
+      badgeKey,
+    });
+
+    if (!existingBadge) {
+      await badgeAchievement.create({
+        volunteerId: id,
+        badgeKey,
+        earnedAt: new Date(),
+      });
+
+      await volunteerActivity.create({
+        volunteerId: id,
+        type: "BADGE_EARNED",
+        title: `${badgeDisplayNames[badgeKey]} Badge Earned`,
+        description: `You earned the ${badgeDisplayNames[badgeKey]} badge.`,
+        referenceId: badgeKey,
+      });
+    }
   }
 
   return {
