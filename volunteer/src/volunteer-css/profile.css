@@ -1,0 +1,411 @@
+.vol-profile-page {
+  padding: 22px 25px 35px;
+  background: #f5faf8;
+  min-height: calc(100vh - 70px);
+  font-family: "Inter", sans-serif;
+}
+
+/* ================= PAGE HEADING ================= */
+
+.vol-profile-heading {
+  width: 900px;
+  max-width: 100%;
+  margin: 0 auto 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vol-profile-heading h2 {
+  margin: 0;
+  color: #123f36;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.vol-profile-heading p {
+  margin: 4px 0 0;
+  color: #78908a;
+  font-size: 13px;
+}
+
+/* ================= BUTTONS ================= */
+
+.vol-edit-btn,
+.vol-save-btn,
+.vol-cancel-btn {
+  height: 39px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vol-edit-btn,
+.vol-save-btn {
+  background: #16a085;
+  color: #fff;
+}
+
+.vol-edit-btn:hover,
+.vol-save-btn:hover {
+  background: #12856f;
+}
+
+.vol-edit-btn i,
+.vol-save-btn i {
+  margin-right: 7px;
+}
+
+.vol-profile-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.vol-cancel-btn {
+  background: #e8f0ed;
+  color: #526d65;
+}
+
+/* ================= MAIN CARD ================= */
+
+.vol-profile-card {
+  width: 900px;
+  max-width: 100%;
+  margin: 0 auto;
+
+  background: #fff;
+  border: 1px solid #dfeee8;
+  border-radius: 13px;
+  box-shadow: 0 5px 20px rgba(20, 85, 68, 0.07);
+}
+
+/* ================= PROFILE TOP ================= */
+
+.vol-profile-top {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 26px;
+  border-bottom: 1px solid #e8f0ed;
+}
+
+.vol-profile-photo {
+  position: relative;
+  width: 82px;
+  height: 82px;
+  flex-shrink: 0;
+}
+
+.vol-profile-photo img {
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #e4f4ee;
+}
+
+.vol-photo-edit {
+  position: absolute;
+  right: -2px;
+  bottom: 0;
+
+  width: 28px;
+  height: 28px;
+
+  border: 3px solid #fff;
+  border-radius: 50%;
+
+  background: #16a085;
+  color: #fff;
+  cursor: pointer;
+}
+
+.vol-profile-basic h3 {
+  margin: 0 0 4px;
+  color: #163f37;
+  font-size: 19px;
+}
+
+.vol-profile-basic p {
+  margin: 0 0 8px;
+  color: #78908a;
+  font-size: 13px;
+}
+
+.vol-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 5px 10px;
+
+  border-radius: 20px;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.vol-status.approved {
+  color: #16815e;
+  background: #e8f8f1;
+}
+
+.vol-status span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #19a974;
+}
+
+/* ================= SECTIONS ================= */
+
+.vol-profile-section {
+  padding: 20px 26px;
+  border-bottom: 1px solid #e8f0ed;
+}
+
+.vol-profile-section.last-section {
+  border-bottom: none;
+}
+
+.vol-profile-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin: 0 0 16px;
+
+  color: #16483e;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.vol-profile-section h4 i {
+  color: #16a085;
+  font-size: 14px;
+}
+
+/* ================= GRID ================= */
+
+.vol-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px 18px;
+  margin-bottom: 15px;
+}
+
+.vol-profile-grid:last-child {
+  margin-bottom: 0;
+}
+
+.vol-profile-grid.three-column {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.vol-field label {
+  display: block;
+  margin-bottom: 6px;
+
+  color: #506861;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.vol-field input,
+.vol-field textarea {
+  width: 100%;
+
+  border: 1px solid #d8e8e2;
+  border-radius: 8px;
+
+  background: #fbfdfc;
+  color: #25463f;
+
+  font-size: 13px;
+  outline: none;
+
+  transition: 0.2s;
+}
+
+.vol-field input {
+  height: 40px;
+  padding: 0 11px;
+}
+
+.vol-field textarea {
+  padding: 10px 11px;
+  resize: vertical;
+  min-height: 72px;
+  font-family: inherit;
+}
+
+.vol-field input:focus,
+.vol-field textarea:focus {
+  border-color: #16a085;
+  background: #fff;
+
+  box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.08);
+}
+
+/* ================= READ ONLY ================= */
+
+.vol-field input:disabled,
+.vol-field textarea:disabled {
+  background: #f3f7f5;
+  color: #71847e;
+  border-color: #e1ebe7;
+  cursor: not-allowed;
+}
+
+/* ================= ADDRESS / TEXTAREA ================= */
+
+.vol-address-field {
+  width: 100%;
+  margin-top: 2px;
+}
+
+/* ================= VERIFICATION ================= */
+
+.vol-verification-status {
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 0 11px;
+
+  border: 1px solid #d8eee5;
+  border-radius: 8px;
+
+  background: #effaf5;
+  color: #16815e;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.vol-proof-box {
+  min-height: 48px;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 7px 11px;
+
+  border: 1px solid #d8e8e2;
+  border-radius: 8px;
+
+  background: #f8fbfa;
+}
+
+.vol-proof-box i {
+  color: #16a085;
+  font-size: 17px;
+}
+
+.vol-proof-box span {
+  flex: 1;
+  color: #60756e;
+  font-size: 13px;
+}
+
+.vol-proof-box button {
+  padding: 6px 13px;
+
+  border: none;
+  border-radius: 6px;
+
+  background: #e4f4ee;
+  color: #147a65;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.vol-proof-box button:hover {
+  background: #d5eee5;
+}
+
+/* ================= LOADING ================= */
+
+.vol-profile-loading {
+  width: 900px;
+  max-width: 100%;
+  min-height: 300px;
+  margin: 0 auto;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  color: #6d827b;
+}
+
+.vol-profile-loading i {
+  font-size: 28px;
+  color: #16a085;
+  margin-bottom: 10px;
+}
+
+.vol-profile-loading p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 950px) {
+
+  .vol-profile-heading,
+  .vol-profile-card {
+    width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  .vol-profile-grid.three-column {
+    grid-template-columns: 1fr;
+  }
+
+  .vol-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vol-profile-heading {
+    align-items: flex-start;
+    gap: 15px;
+  }
+}
+
+@media (max-width: 520px) {
+  .vol-profile-heading {
+    flex-direction: column;
+  }
+
+  .vol-profile-top {
+    padding: 18px;
+  }
+
+  .vol-profile-section {
+    padding: 18px;
+  }
+
+  .vol-profile-actions {
+    width: 100%;
+  }
+
+  .vol-cancel-btn,
+  .vol-save-btn,
+  .vol-edit-btn {
+    flex: 1;
+  }
+}

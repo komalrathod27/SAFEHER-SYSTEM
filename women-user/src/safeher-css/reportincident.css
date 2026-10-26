@@ -1,0 +1,451 @@
+/* =========================================================
+   SAFEHER - REPORT INCIDENT
+   ========================================================= */
+
+.ri-body {
+  min-height: 100vh;
+
+  padding: 45px 30px 60px;
+
+  background: #f7f9fc;
+
+  font-family: "Inter", Arial, sans-serif;
+
+  color: #172554;
+}
+
+
+/* =========================================================
+   PAGE HEADING
+   ========================================================= */
+
+.ri-page-head {
+  max-width: 1050px;
+
+  margin: 0 auto 30px;
+
+  padding-bottom: 22px;
+
+  border-bottom: 1px solid #e5e9f0;
+}
+
+.ri-tag {
+  display: inline-block;
+
+  margin-bottom: 10px;
+  padding: 6px 12px;
+
+  border-radius: 20px;
+
+  background: #fff0f5;
+
+  color: #e05287;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ri-page-head h1 {
+  margin: 0 0 7px;
+
+  color: #172554;
+
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.ri-page-head p {
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+
+/* =========================================================
+   LAYOUT
+   ========================================================= */
+
+.ri-layout {
+  max-width: 1050px;
+
+  margin: 0 auto;
+}
+
+
+/* =========================================================
+   MAIN CARD
+   ========================================================= */
+
+.ri-card {
+  padding: 32px;
+
+  background: #ffffff;
+
+  border: 1px solid #e4e8ef;
+  border-radius: 16px;
+
+  box-shadow: 0 8px 28px rgba(23, 37, 84, 0.06);
+}
+
+
+/* =========================================================
+   CARD HEADING
+   ========================================================= */
+
+.ri-card-heading {
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  margin-bottom: 28px;
+
+  padding-bottom: 20px;
+
+  border-bottom: 1px solid #edf0f4;
+}
+
+.ri-heading-icon {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  background: #fff0f5;
+
+  color: #e05287;
+
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.ri-small-label {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: #2f80ed;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 1px;
+}
+
+.ri-card-heading h2 {
+  margin: 0;
+
+  color: #172554;
+
+  font-size: 21px;
+}
+
+
+/* =========================================================
+   FORM FIELDS
+   ========================================================= */
+
+.ri-field {
+  margin-bottom: 21px;
+}
+
+.ri-field label {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #334155;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ri-field input,
+.ri-field select,
+.ri-field textarea {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  border: 1px solid #dce2ea;
+  border-radius: 8px;
+
+  outline: none;
+
+  background: #ffffff;
+
+  color: #172554;
+
+  font-family: inherit;
+
+  font-size: 13px;
+
+  transition: 0.2s;
+}
+
+.ri-field input,
+.ri-field select {
+  height: 46px;
+
+  padding: 0 13px;
+}
+
+.ri-field textarea {
+  min-height: 125px;
+
+  padding: 13px;
+
+  resize: vertical;
+}
+
+.ri-field input::placeholder,
+.ri-field textarea::placeholder {
+  color: #9aa5b5;
+}
+
+.ri-field input:focus,
+.ri-field select:focus,
+.ri-field textarea:focus {
+  border-color: #2f80ed;
+
+  box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.08);
+}
+
+
+/* =========================================================
+   DATE + TIME
+   ========================================================= */
+
+.ri-row {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 18px;
+}
+
+
+/* =========================================================
+   PHOTO UPLOAD
+   ========================================================= */
+
+.ri-file-field {
+  display: flex;
+  align-items: center;
+
+  min-height: 46px;
+
+  border: 1px solid #dce2ea;
+  border-radius: 8px;
+
+  overflow: hidden;
+
+  background: #ffffff;
+}
+
+.ri-file-btn {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+
+  height: 46px;
+
+  padding: 0 18px;
+
+  margin: 0 !important;
+
+  background: #f1f5f9;
+
+  color: #334155 !important;
+
+  cursor: pointer;
+
+  font-size: 12px !important;
+  font-weight: 600 !important;
+
+  border-right: 1px solid #dce2ea;
+}
+
+.ri-file-btn:hover {
+  background: #e8edf3;
+}
+
+.ri-file-name {
+  padding-left: 13px;
+
+  color: #94a3b8;
+
+  font-size: 12px;
+}
+
+.ri-hidden-file {
+  display: none !important;
+}
+
+
+/* =========================================================
+   LOCATION
+   ========================================================= */
+
+.ri-location-section {
+  margin-bottom: 22px;
+}
+
+.ri-map-wrapper {
+  width: 100%;
+
+  overflow: hidden;
+
+  border: 1px solid #dce2ea;
+  border-radius: 10px;
+
+  background: #f1f5f9;
+}
+
+/* ======= SUBMIT BUTTON */
+
+.ri-submit-btn {
+  width: 200px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #2f80ed;
+  color: #ffffff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  transition: 0.2s;
+  margin: auto;
+}
+
+.ri-submit-btn:hover {
+  background: #236fd3;
+
+  transform: translateY(-1px);
+}
+
+.ri-submit-btn i {
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   SAFETY NOTE
+   ========================================================= */
+
+.ri-footnote {
+  max-width: 1050px;
+
+  display: flex;
+  align-items: flex-start;
+
+  gap: 13px;
+
+  margin: 25px auto 0;
+
+  padding: 18px 20px;
+
+  border: 1px solid #dbeafe;
+  border-radius: 11px;
+
+  background: #f0f7ff;
+}
+
+.ri-footnote-icon {
+  width: 36px;
+  height: 36px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  font-size: 17px;
+}
+
+.ri-footnote p {
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: 12px;
+
+  line-height: 1.6;
+}
+
+.ri-footnote strong {
+  color: #172554;
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 750px) {
+
+  .ri-body {
+    padding: 35px 20px 50px;
+  }
+
+  .ri-card {
+    padding: 25px;
+  }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 550px) {
+
+  .ri-body {
+    padding: 28px 15px 40px;
+  }
+
+  .ri-page-head h1 {
+    font-size: 27px;
+  }
+
+  .ri-page-head p {
+    font-size: 13px;
+  }
+
+  .ri-card {
+    padding: 20px;
+  }
+
+  .ri-row {
+    grid-template-columns: 1fr;
+
+    gap: 0;
+  }
+
+  .ri-file-field {
+    flex-wrap: wrap;
+  }
+
+  .ri-footnote {
+    padding: 15px;
+  }
+
+}

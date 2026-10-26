@@ -1,0 +1,407 @@
+.safeher-header {
+  font-family: inherit;
+}
+
+
+/* =====================================================
+   TOP HEADER
+===================================================== */
+
+.safeher-header .logo-contact {
+  background: linear-gradient(90deg, #1d2b64, #2f80ed);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(31, 45, 95, 0.15);
+}
+
+
+.safeher-header .single-top-contact {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+
+.safeher-header .single-top-contact i {
+  color: #ffd6e7;
+  font-size: 19px;
+}
+
+
+.safeher-header .single-top-contact h4,
+.safeher-header .single-top-contact h4 a {
+  color: #ffffff;
+}
+
+
+.safeher-header .single-top-contact h4 a {
+  transition: 0.3s ease;
+}
+
+
+.safeher-header .single-top-contact h4 a:hover {
+  color: #ffd0e3;
+}
+
+
+/* =====================================================
+   SOCIAL ICONS
+===================================================== */
+
+.safeher-header .top_social_profile ul {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 15px;
+}
+
+
+.safeher-header .top_social_profile a {
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+
+.safeher-header .top_social_profile a:hover {
+  color: #ff7aa8;
+  transform: translateY(-2px);
+}
+
+
+.safeher-header .top_social_profile i {
+  font-size: 18px;
+}
+
+
+/* =====================================================
+   NAVBAR
+===================================================== */
+
+#navigation {
+  padding: 11px;
+}
+
+.safeher-header .site-navigation {
+  background: #ffffff !important;
+  border-bottom: 1px solid #edf0f7;
+  box-shadow: 0 4px 20px rgba(31, 45, 95, 0.08);
+}
+
+
+/* =====================================================
+   LOGO
+===================================================== */
+
+.safeher-header .site-logo img {
+  width: 210px;
+  height: auto;
+  max-width: none;
+  transition: transform 0.3s ease;
+}
+
+
+.safeher-header .site-logo img:hover {
+  transform: scale(1.03);
+}
+
+
+/* =====================================================
+   MENU
+===================================================== */
+
+.safeher-header #main-menu ul {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+
+.safeher-header #main-menu ul li {
+  white-space: nowrap;
+}
+
+
+.safeher-header #main-menu ul li a {
+  position: relative;
+  color: #172554;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+
+.safeher-header #main-menu ul li a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -7px;
+  width: 0;
+  height: 2px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #2f80ed, #e83e8c);
+  transition: width 0.3s ease;
+}
+
+
+.safeher-header #main-menu ul li a:hover {
+  color: #2f80ed;
+}
+
+
+.safeher-header #main-menu ul li a:hover::after {
+  width: 100%;
+}
+
+
+/* =====================================================
+   RIGHT SIDE
+===================================================== */
+
+.safeher-header .header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+  white-space: nowrap;
+}
+
+
+/* =====================================================
+   REGISTER BUTTON
+===================================================== */
+
+.safeher-header .btn_two {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  padding: 11px 20px;
+
+  background: #ffffff;
+  color: #172554 !important;
+
+  border: 2px solid #2f80ed;
+  border-radius: 30px;
+
+  font-weight: 700;
+  white-space: nowrap;
+
+  transition: all 0.3s ease;
+
+  box-shadow: 0 4px 12px rgba(47, 128, 237, 0.12);
+}
+
+
+.safeher-header .btn_two i {
+  color: #e83e8c;
+  transition: transform 0.3s ease;
+}
+
+
+.safeher-header .btn_two:hover {
+  background: linear-gradient(90deg, #2f80ed, #e83e8c);
+  border-color: transparent;
+  color: #ffffff !important;
+
+  box-shadow: 0 7px 18px rgba(47, 128, 237, 0.25);
+
+  transform: translateY(-2px);
+}
+
+
+.safeher-header .btn_two:hover i {
+  color: #ffffff;
+  transform: translateX(4px);
+}
+
+
+/* =====================================================
+   NOTIFICATION
+===================================================== */
+
+.safeher-header .notification-link {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 42px;
+  height: 42px;
+
+  color: #172554;
+
+  border-radius: 50%;
+
+  transition: all 0.3s ease;
+}
+
+
+.safeher-header .notification-link i {
+  font-size: 21px;
+}
+
+
+.safeher-header .notification-link:hover {
+  color: #2f80ed;
+  background: #f3f7ff;
+}
+
+
+/* NOTIFICATION BADGE */
+
+.safeher-header .notification-badge {
+  position: absolute;
+
+  top: 1px;
+  right: 0;
+
+  min-width: 17px;
+  height: 17px;
+
+  padding: 0 4px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #e83e8c;
+  color: #ffffff;
+
+  border-radius: 50%;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+
+/* =====================================================
+   PROFILE
+===================================================== */
+
+.safeher-header .profile-dropdown {
+  position: relative;
+}
+
+
+.safeher-header .profile-button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  padding: 8px 10px;
+
+  background: transparent;
+  border: none;
+
+  color: #172554;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.3s ease;
+}
+
+
+.safeher-header .profile-button>i:first-child {
+  color: #2f80ed;
+  font-size: 25px;
+}
+
+
+.safeher-header .dropdown-arrow {
+  font-size: 11px;
+  color: #64748b;
+  transition: transform 0.3s ease;
+}
+
+
+.safeher-header .profile-button:hover {
+  color: #e83e8c;
+}
+
+
+.safeher-header .profile-button:hover>i:first-child {
+  color: #e83e8c;
+}
+
+
+/* =====================================================
+   PROFILE DROPDOWN MENU
+===================================================== */
+
+.safeher-header .profile-menu {
+  position: absolute;
+
+  top: 100%;
+  right: 0;
+
+  min-width: 180px;
+
+  padding: 8px 0;
+
+  background: #ffffff;
+
+  border: 1px solid #edf0f7;
+  border-radius: 10px;
+
+  box-shadow: 0 8px 25px rgba(31, 45, 95, 0.15);
+
+  opacity: 0;
+  visibility: hidden;
+
+  transform: translateY(10px);
+
+  transition: all 0.25s ease;
+
+  z-index: 999;
+}
+
+
+/* SHOW DROPDOWN ON HOVER */
+
+.safeher-header .profile-dropdown:hover .profile-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+
+.safeher-header .profile-dropdown:hover .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+
+/* DROPDOWN LINKS */
+
+.safeher-header .profile-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 16px;
+
+  color: #172554;
+
+  font-size: 14px;
+  font-weight: 500;
+
+  transition: all 0.2s ease;
+}
+
+
+.safeher-header .profile-menu a i {
+  width: 18px;
+  color: #2f80ed;
+}
+
+
+.safeher-header .profile-menu a:hover {
+  background: #f4f7ff;
+  color: #e83e8c;
+}
+
+
+.safeher-header .profile-menu a:hover i {
+  color: #e83e8c;
+}

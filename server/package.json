@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "body-parser": "^2.3.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "mongoose": "^9.9.4",
+    "mongosh": "^2.10.0",
+    "multer": "^2.3.0",
+    "pdfkit": "^0.20.2",
+    "socket.io": "^4.8.1"
+  }
+}
