@@ -1,5 +1,6 @@
 import Axios from "axios";
 import Swal from "sweetalert2";
+import { getAccurateLocation } from "./geoService";
 
 /**
  * Triggers an Emergency SOS alert for the logged-in woman user.
@@ -70,10 +71,37 @@ export const activateSOSAlert = () => {
       })
         .then((resp) => {
           localStorage.setItem("activeSosId", resp.data.sos._id);
+          const smsStatus = resp.data.smsStatus;
+
+          if (smsStatus && !smsStatus.success && smsStatus.devExhausted && smsStatus.gatewayExhausted) {
+            Swal.fire({
+              icon: "warning",
+              title: "⚠️ SMS Delivery Warning!",
+              html: `
+                <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+                  <p style="color: #dc2626; font-weight: 800; font-size: 16px; margin-bottom: 8px;">
+                    🚨 Bhai dono ka hi recharge nahi hai!
+                  </p>
+                  <p style="margin-bottom: 8px; color: #334155;">
+                    Dev ke number ka 100 SMS/day recharge pack bhi khatam ho gaya hai aur SMS Gateway ka bhi recharge nahi hai, isiliye SMS nahi ja paya!
+                  </p>
+                  <p style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 10px; border-radius: 6px; color: #991b1b; font-weight: 600; margin: 0;">
+                    Email alert bhej diya gaya hai. Kripya turant Emergency Helpline 112 par direct call karein!
+                  </p>
+                </div>
+              `,
+              confirmButtonColor: "#dc2626",
+              confirmButtonText: "Open Tracking Map",
+            }).then(() => {
+              window.location.href = "/sostracking";
+            });
+            return;
+          }
+
           Swal.fire({
             icon: "success",
             title: "🚨 SOS Alert Sent!",
-            text: "Aapka live location volunteers ko share ho gaya hai. Tracking map open ho raha hai...",
+            text: "Aapka live location volunteers aur trusted contacts ko share ho gaya hai. Tracking map open ho raha hai...",
             timer: 2000,
             showConfirmButton: false,
           }).then(() => {
@@ -92,24 +120,8 @@ export const activateSOSAlert = () => {
         });
     };
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          sendSOS(
-            pos.coords.latitude,
-            pos.coords.longitude,
-            "Current GPS Live Location"
-          );
-        },
-        (err) => {
-          console.warn("GPS warning, using fallback coordinates:", err.message);
-          // Fallback safety coordinates (Vadodara city center) so emergency action is never blocked
-          sendSOS(22.3072, 73.1812, "Detected City Location (Vadodara)");
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    } else {
-      sendSOS(22.3072, 73.1812, "Default Coordinates");
-    }
+    getAccurateLocation(user).then((loc) => {
+      sendSOS(loc.lat, loc.lng, loc.address);
+    });
   });
 };

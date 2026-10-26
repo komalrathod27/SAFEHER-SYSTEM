@@ -555,43 +555,105 @@ function Register() {
                     City
                   </label>
 
-                  <select
+                  <input
                     id="city"
+                    list="all-india-cities"
                     className="form-control"
+                    placeholder="Enter or select your city"
                     style={{
                       height: "48px",
                       borderRadius: "8px",
                       border: "1px solid #dce2ec",
                       padding: "10px 14px",
                     }}
-                  >
-                    <option value="">Select City</option>
-                    <option>Vadodara</option>
-                    <option>Ahmedabad</option>
-                    <option>Surat</option>
-                    <option>Rajkot</option>
-                    <option>Gandhinagar</option>
-                    <option>Bhavnagar</option>
-                    <option>Jamnagar</option>
-                    <option>Junagadh</option>
-                    <option>Anand</option>
-                    <option>Nadiad</option>
-                    <option>Navsari</option>
-                    <option>Valsad</option>
-                    <option>Vapi</option>
-                    <option>Bharuch</option>
-                    <option>Surendranagar</option>
-                    <option>Porbandar</option>
-                    <option>Patan</option>
-                    <option>Mehsana</option>
-                    <option>Bhuj</option>
-                    <option>Veraval</option>
-                    <option>Amreli</option>
-                    <option>Gondal</option>
-                    <option>Morbi</option>
-                    <option>Palanpur</option>
-                    <option>Other</option>
-                  </select>
+                  />
+                  <datalist id="all-india-cities">
+                    <option value="Amreli">Amreli (Gujarat)</option>
+                    <option value="Vadodara">Vadodara (Gujarat)</option>
+                    <option value="Ahmedabad">Ahmedabad (Gujarat)</option>
+                    <option value="Surat">Surat (Gujarat)</option>
+                    <option value="Rajkot">Rajkot (Gujarat)</option>
+                    <option value="Gandhinagar">Gandhinagar (Gujarat)</option>
+                    <option value="Bhavnagar">Bhavnagar (Gujarat)</option>
+                    <option value="Jamnagar">Jamnagar (Gujarat)</option>
+                    <option value="Junagadh">Junagadh (Gujarat)</option>
+                    <option value="Anand">Anand (Gujarat)</option>
+                    <option value="Nadiad">Nadiad (Gujarat)</option>
+                    <option value="Navsari">Navsari (Gujarat)</option>
+                    <option value="Valsad">Valsad (Gujarat)</option>
+                    <option value="Vapi">Vapi (Gujarat)</option>
+                    <option value="Bharuch">Bharuch (Gujarat)</option>
+                    <option value="Porbandar">Porbandar (Gujarat)</option>
+                    <option value="Bhuj">Bhuj (Gujarat)</option>
+                    <option value="Morbi">Morbi (Gujarat)</option>
+                    <option value="Mehsana">Mehsana (Gujarat)</option>
+                    <option value="Palanpur">Palanpur (Gujarat)</option>
+                    <option value="Mahuva">Mahuva (Gujarat)</option>
+                    <option value="Mumbai">Mumbai (Maharashtra)</option>
+                    <option value="Pune">Pune (Maharashtra)</option>
+                    <option value="Nagpur">Nagpur (Maharashtra)</option>
+                    <option value="Thane">Thane (Maharashtra)</option>
+                    <option value="Nashik">Nashik (Maharashtra)</option>
+                    <option value="Navi Mumbai">Navi Mumbai (Maharashtra)</option>
+                    <option value="Delhi">Delhi (NCR)</option>
+                    <option value="New Delhi">New Delhi (NCR)</option>
+                    <option value="Noida">Noida (Uttar Pradesh)</option>
+                    <option value="Gurugram">Gurugram / Gurgaon (Haryana)</option>
+                    <option value="Faridabad">Faridabad (Haryana)</option>
+                    <option value="Ghaziabad">Ghaziabad (Uttar Pradesh)</option>
+                    <option value="Bengaluru">Bengaluru / Bangalore (Karnataka)</option>
+                    <option value="Mysuru">Mysuru / Mysore (Karnataka)</option>
+                    <option value="Hubli">Hubli (Karnataka)</option>
+                    <option value="Mangaluru">Mangaluru / Mangalore (Karnataka)</option>
+                    <option value="Hyderabad">Hyderabad (Telangana)</option>
+                    <option value="Warangal">Warangal (Telangana)</option>
+                    <option value="Chennai">Chennai (Tamil Nadu)</option>
+                    <option value="Coimbatore">Coimbatore (Tamil Nadu)</option>
+                    <option value="Madurai">Madurai (Tamil Nadu)</option>
+                    <option value="Tiruchirappalli">Tiruchirappalli / Trichy (Tamil Nadu)</option>
+                    <option value="Kolkata">Kolkata (West Bengal)</option>
+                    <option value="Howrah">Howrah (West Bengal)</option>
+                    <option value="Siliguri">Siliguri (West Bengal)</option>
+                    <option value="Jaipur">Jaipur (Rajasthan)</option>
+                    <option value="Jodhpur">Jodhpur (Rajasthan)</option>
+                    <option value="Udaipur">Udaipur (Rajasthan)</option>
+                    <option value="Kota">Kota (Rajasthan)</option>
+                    <option value="Bikaner">Bikaner (Rajasthan)</option>
+                    <option value="Lucknow">Lucknow (Uttar Pradesh)</option>
+                    <option value="Kanpur">Kanpur (Uttar Pradesh)</option>
+                    <option value="Varanasi">Varanasi (Uttar Pradesh)</option>
+                    <option value="Agra">Agra (Uttar Pradesh)</option>
+                    <option value="Prayagraj">Prayagraj / Allahabad (Uttar Pradesh)</option>
+                    <option value="Meerut">Meerut (Uttar Pradesh)</option>
+                    <option value="Bhopal">Bhopal (Madhya Pradesh)</option>
+                    <option value="Indore">Indore (Madhya Pradesh)</option>
+                    <option value="Gwalior">Gwalior (Madhya Pradesh)</option>
+                    <option value="Jabalpur">Jabalpur (Madhya Pradesh)</option>
+                    <option value="Patna">Patna (Bihar)</option>
+                    <option value="Gaya">Gaya (Bihar)</option>
+                    <option value="Muzaffarpur">Muzaffarpur (Bihar)</option>
+                    <option value="Chandigarh">Chandigarh</option>
+                    <option value="Ludhiana">Ludhiana (Punjab)</option>
+                    <option value="Amritsar">Amritsar (Punjab)</option>
+                    <option value="Jalandhar">Jalandhar (Punjab)</option>
+                    <option value="Thiruvananthapuram">Thiruvananthapuram (Kerala)</option>
+                    <option value="Kochi">Kochi / Cochin (Kerala)</option>
+                    <option value="Kozhikode">Kozhikode (Kerala)</option>
+                    <option value="Visakhapatnam">Visakhapatnam (Andhra Pradesh)</option>
+                    <option value="Vijayawada">Vijayawada (Andhra Pradesh)</option>
+                    <option value="Bhubaneswar">Bhubaneswar (Odisha)</option>
+                    <option value="Cuttack">Cuttack (Odisha)</option>
+                    <option value="Guwahati">Guwahati (Assam)</option>
+                    <option value="Ranchi">Ranchi (Jharkhand)</option>
+                    <option value="Jamshedpur">Jamshedpur (Jharkhand)</option>
+                    <option value="Raipur">Raipur (Chhattisgarh)</option>
+                    <option value="Dehradun">Dehradun (Uttarakhand)</option>
+                    <option value="Shimla">Shimla (Himachal Pradesh)</option>
+                    <option value="Srinagar">Srinagar (Jammu and Kashmir)</option>
+                    <option value="Jammu">Jammu (Jammu and Kashmir)</option>
+                    <option value="Panaji">Panaji (Goa)</option>
+                    <option value="Puducherry">Puducherry</option>
+                  </datalist>
                 </div>
               </div>
             </div>
@@ -608,7 +670,7 @@ function Register() {
                       display: "block",
                     }}
                   >
-                    State
+                    State / Union Territory
                   </label>
 
                   <select
@@ -621,8 +683,43 @@ function Register() {
                       padding: "10px 14px",
                     }}
                   >
-                    <option value="">Select State</option>
+                    <option value="">Select State / UT</option>
                     <option>Gujarat</option>
+                    <option>Maharashtra</option>
+                    <option>Delhi</option>
+                    <option>Karnataka</option>
+                    <option>Tamil Nadu</option>
+                    <option>Telangana</option>
+                    <option>Andhra Pradesh</option>
+                    <option>Uttar Pradesh</option>
+                    <option>West Bengal</option>
+                    <option>Rajasthan</option>
+                    <option>Madhya Pradesh</option>
+                    <option>Bihar</option>
+                    <option>Punjab</option>
+                    <option>Haryana</option>
+                    <option>Kerala</option>
+                    <option>Odisha</option>
+                    <option>Assam</option>
+                    <option>Jharkhand</option>
+                    <option>Chhattisgarh</option>
+                    <option>Uttarakhand</option>
+                    <option>Himachal Pradesh</option>
+                    <option>Jammu and Kashmir</option>
+                    <option>Goa</option>
+                    <option>Chandigarh</option>
+                    <option>Puducherry</option>
+                    <option>Tripura</option>
+                    <option>Meghalaya</option>
+                    <option>Manipur</option>
+                    <option>Mizoram</option>
+                    <option>Nagaland</option>
+                    <option>Arunachal Pradesh</option>
+                    <option>Sikkim</option>
+                    <option>Ladakh</option>
+                    <option>Andaman and Nicobar Islands</option>
+                    <option>Dadra and Nagar Haveli and Daman and Diu</option>
+                    <option>Lakshadweep</option>
                   </select>
                 </div>
               </div>

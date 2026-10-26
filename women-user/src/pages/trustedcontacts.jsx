@@ -27,6 +27,7 @@ function TrustedContacts() {
     const contactName = document.getElementById("contactName").value.trim();
     const relationship = document.getElementById("relationship").value;
     const phoneNo = document.getElementById("phoneNo").value.trim();
+    const email = document.getElementById("email").value.trim();
     const priority = document.querySelector('input[name="priority"]:checked');
 
     const usersession = localStorage.getItem("mydata");
@@ -86,6 +87,17 @@ function TrustedContacts() {
       return;
     }
 
+    // Email validation (optional but if provided must be valid)
+    if (email !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid Email Address",
+        text: "Please enter a valid email address (e.g., example@gmail.com).",
+        confirmButtonColor: "#2f80ed",
+      });
+      return;
+    }
+
     // Priority validation
     if (!priority) {
       Swal.fire({
@@ -103,6 +115,7 @@ function TrustedContacts() {
       contactName: contactName,
       relationship: relationship,
       phoneNo: phoneNo,
+      email: email,
       priority: priority.value,
     })
 
@@ -114,6 +127,7 @@ function TrustedContacts() {
         document.getElementById("contactName").value = "";
         document.getElementById("relationship").value = "";
         document.getElementById("phoneNo").value = "";
+        document.getElementById("email").value = "";
 
         const priorityButtons = document.querySelectorAll(
           'input[name="priority"]',
@@ -236,6 +250,20 @@ function TrustedContacts() {
         </div>
 
         <div>
+          <label style="display: block; margin-bottom: 6px; font-weight: 600;">
+            Email Address (for Emergency SOS Alerts)
+          </label>
+          <input
+            id="editEmail"
+            type="email"
+            class="swal2-input"
+            placeholder="Enter email address"
+            value="${contact.email || ""}"
+            style="width: 100%; margin: 0; box-sizing: border-box;"
+          />
+        </div>
+
+        <div>
           <label style="display: block; margin-bottom: 8px; font-weight: 600;">
             Priority
           </label>
@@ -291,6 +319,8 @@ function TrustedContacts() {
 
         const phoneNo = document.getElementById("editPhoneNo").value.trim();
 
+        const email = document.getElementById("editEmail").value.trim();
+
         const priority = document.querySelector(
           'input[name="editPriority"]:checked',
         );
@@ -317,6 +347,13 @@ function TrustedContacts() {
           return false;
         }
 
+        if (email !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          Swal.showValidationMessage(
+            "Please enter a valid email address.",
+          );
+          return false;
+        }
+
         if (!priority) {
           Swal.showValidationMessage("Please select contact priority.");
           return false;
@@ -326,6 +363,7 @@ function TrustedContacts() {
           contactName,
           relationship,
           phoneNo,
+          email,
           priority: priority.value,
         };
       },
@@ -430,7 +468,33 @@ function TrustedContacts() {
                     <div className="tc-contact-info">
                       <h3>{contact.contactName}</h3>
                       <p>{contact.relationship}</p>
-                      <span className="tc-phone">{contact.phoneNo}</span>
+                      <span className="tc-phone">📞 {contact.phoneNo}</span>
+                      {contact.email ? (
+                        <span
+                          className="tc-email"
+                          style={{
+                            display: "block",
+                            fontSize: "13px",
+                            color: "#475569",
+                            marginTop: "3px",
+                          }}
+                        >
+                          ✉️ {contact.email}
+                        </span>
+                      ) : (
+                        <span
+                          className="tc-no-email"
+                          style={{
+                            display: "block",
+                            fontSize: "12px",
+                            color: "#dc2626",
+                            marginTop: "3px",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          ⚠️ No email (Click Edit to add for SOS emails)
+                        </span>
+                      )}
                     </div>
 
                     <div className="tc-contact-right">
@@ -537,6 +601,19 @@ function TrustedContacts() {
                   id="phoneNo"
                   placeholder="Enter 10 digit phone number"
                   maxLength="10"
+                />
+              </div>
+
+              {/* EMAIL */}
+              <div className="tc-form-group">
+                <label htmlFor="email">
+                  Email Address <span style={{ color: "#dc2626", fontSize: "12px" }}>* (For Emergency SOS Alerts)</span>
+                </label>
+
+                <input
+                  type="email"
+                  id="email"
+                  placeholder="Enter email address (e.g. member@gmail.com)"
                 />
               </div>
 

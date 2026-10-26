@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import Axios from "axios";
 import Swal from "sweetalert2";
 import { io } from "socket.io-client";
+import { getAccurateLocation } from "../utils/geoService";
 
 // Precise Haversine distance calculator
 function computeDistance(lat1, lon1, lat2, lon2) {
@@ -425,6 +426,7 @@ function SOSRequests() {
           volunteerName: volunteerUser?.name || "Komal Volunteer",
           volunteerEmail: volunteerUser?.email || "volunteer@safeher.com",
           volunteerPhone: volunteerUser?.contact_no || "+91 98765 43210",
+          volunteerPhoto: volunteerUser?.profile_photo || "",
           volunteerLat: volLat,
           volunteerLng: volLng,
         })
@@ -476,29 +478,14 @@ function SOSRequests() {
           });
       };
 
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            let lat = pos.coords.latitude;
-            let lng = pos.coords.longitude;
-            // REAL volunteer GPS coordinates
-            sendApproval(lat, lng);
-          },
-          (err) => {
-            console.warn("Volunteer GPs error", err.message);
-            // Agar GPS fetch na ho paye, toh null bhejo taaki galat 1.2 km na dikhe
-            Swal.fire({
-              icon: "warning",
-              title: "GPS Location Needed",
-              text: "Could not fetch your exact location. Please turn on Location/GPS permission and click 'Share GPS'.",
-            });
-            sendApproval(null, null);
-          },
-          { enableHighAccuracy: true, timeout: 10000 },
-        );
-      } else {
-        sendApproval(null, null);
-      }
+      getAccurateLocation(volunteerUser)
+        .then((loc) => {
+          sendApproval(loc.lat, loc.lng);
+        })
+        .catch((err) => {
+          console.warn("Volunteer GPS fallback error:", err);
+          sendApproval(null, null);
+        });
     });
   };
 

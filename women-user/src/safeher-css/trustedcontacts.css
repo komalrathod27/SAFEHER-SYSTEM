@@ -289,9 +289,22 @@
   font-size: 14px;
 }
 
-.phoneNo {
-  color: #94a3b8;
+.phoneNo,
+.tc-phone {
+  color: #64748b;
   font-size: 13px;
+  font-weight: 500;
+}
+
+.tc-email {
+  color: #2563eb !important;
+  font-size: 12.5px;
+  word-break: break-all;
+}
+
+.tc-no-email {
+  color: #e11d48 !important;
+  font-size: 11.5px;
 }
 
 .tc-contact-right {
