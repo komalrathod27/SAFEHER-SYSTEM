@@ -1330,6 +1330,24 @@ app.put("/api/updatevolunteerprofile/:_id", async (req, res) => {
       });
     }
 
+    // Check whether profile details actually changed for activity history
+    const profileFields = {
+      name: name.trim(),
+      contact_no: contact_no.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      pincode: pincode.trim(),
+      address: address.trim(),
+      qualification: qualification.trim(),
+      serviceArea: serviceArea.trim(),
+      reason: reason.trim(),
+    };
+
+    const changedFields = Object.keys(profileFields).filter(
+      (field) =>
+        String(volunteerData[field] ?? "").trim() !== profileFields[field],
+    );
+
     // Update only editable fields
     volunteerData.name = name.trim();
     volunteerData.contact_no = contact_no.trim();
@@ -1342,6 +1360,16 @@ app.put("/api/updatevolunteerprofile/:_id", async (req, res) => {
     volunteerData.reason = reason.trim();
 
     await volunteerData.save();
+    // Log profile changes only when details actually changed
+    if (changedFields.length > 0) {
+      await volunteerActivity.create({
+        volunteerId: String(volunteerData._id),
+        type: "PROFILE_UPDATED",
+        title: "Profile Updated",
+        description: `Updated profile details: ${changedFields.join(", ")}.`,
+        referenceId: String(volunteerData._id),
+      });
+    }
     res.status(200).json({
       message: "Profile updated successfully.",
       volunteer: volunteerData,
@@ -2878,7 +2906,7 @@ async function updateVolunteerBadges(volunteerId) {
       }
     }
   }
-  
+
   const eligibleBadges = [];
   if (resolvedCount >= 1) {
     eligibleBadges.push("helping-hand");
