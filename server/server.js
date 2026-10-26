@@ -1343,10 +1343,26 @@ app.put("/api/updatevolunteerprofile/:_id", async (req, res) => {
       reason: reason.trim(),
     };
 
-    const changedFields = Object.keys(profileFields).filter(
-      (field) =>
-        String(volunteerData[field] ?? "").trim() !== profileFields[field],
-    );
+    const changedFields = Object.keys(profileFields)
+      .filter(
+        (field) =>
+          String(volunteerData[field] ?? "").trim() !== profileFields[field],
+      )
+      .map((field) => {
+        const fieldNames = {
+          name: "Name",
+          contact_no: "Contact Number",
+          city: "City",
+          state: "State",
+          pincode: "Pincode",
+          address: "Address",
+          qualification: "Qualification",
+          serviceArea: "Service Area",
+          reason: "Reason",
+        };
+
+        return `${fieldNames[field]} updated to ${profileFields[field]}`;
+      });
 
     // Update only editable fields
     volunteerData.name = name.trim();
@@ -1366,8 +1382,7 @@ app.put("/api/updatevolunteerprofile/:_id", async (req, res) => {
         volunteerId: String(volunteerData._id),
         type: "PROFILE_UPDATED",
         title: "Profile Updated",
-        description: `Updated profile details: ${changedFields.join(", ")}.`,
-        referenceId: String(volunteerData._id),
+        description: changedFields.join(", ") + ".",
       });
     }
     res.status(200).json({
@@ -1488,6 +1503,36 @@ app.put("/api/updatevolunteerpassword/:user_id", async (req, res) => {
     res.status(500).send({
       status: "Error",
       message: "Unable to update password",
+    });
+  }
+});
+
+/* Get Volunteer Activity History */
+app.get("/api/volunteer-activity/:volunteerId", async (req, res) => {
+  try {
+    const { volunteerId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(volunteerId)) {
+      return res.status(400).json({
+        message: "Invalid volunteer ID.",
+      });
+    }
+
+    const activities = await volunteerActivity
+      .find({ volunteerId })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .select("type title description createdAt");
+
+    return res.status(200).json({
+      message: "Activity history fetched successfully.",
+      activities,
+    });
+  } catch (error) {
+    console.error("Volunteer activity history error:", error);
+
+    return res.status(500).json({
+      message: "Failed to fetch activity history.",
     });
   }
 });
@@ -1982,10 +2027,6 @@ const volunteerActivity = mongoose.model(
         type: String,
         default: "",
         trim: true,
-      },
-      referenceId: {
-        type: String,
-        default: null,
       },
       createdAt: {
         type: Date,
@@ -2845,7 +2886,6 @@ async function updateVolunteerBadges(volunteerId) {
       const existingMilestone = await volunteerActivity.findOne({
         volunteerId: id,
         type: "VOLUNTEER_MILESTONE",
-        referenceId: `resolved-${milestone.count}`,
       });
 
       if (!existingMilestone) {
@@ -2854,7 +2894,6 @@ async function updateVolunteerBadges(volunteerId) {
           type: "VOLUNTEER_MILESTONE",
           title: milestone.title,
           description: milestone.description,
-          referenceId: `resolved-${milestone.count}`,
         });
       }
     }
@@ -2892,7 +2931,6 @@ async function updateVolunteerBadges(volunteerId) {
       const existingMilestone = await volunteerActivity.findOne({
         volunteerId: id,
         type: "TRUST_SCORE_MILESTONE",
-        referenceId: `trust-score-${milestone}`,
       });
 
       if (!existingMilestone) {
@@ -2901,7 +2939,6 @@ async function updateVolunteerBadges(volunteerId) {
           type: "TRUST_SCORE_MILESTONE",
           title: `Trust Score ${milestone} Achieved`,
           description: `Your Trust Score has reached ${milestone} or higher.`,
-          referenceId: `trust-score-${milestone}`,
         });
       }
     }
@@ -2943,7 +2980,6 @@ async function updateVolunteerBadges(volunteerId) {
         type: "BADGE_EARNED",
         title: `${badgeDisplayNames[badgeKey]} Badge Earned`,
         description: `You earned the ${badgeDisplayNames[badgeKey]} badge.`,
-        referenceId: badgeKey,
       });
     }
   }
