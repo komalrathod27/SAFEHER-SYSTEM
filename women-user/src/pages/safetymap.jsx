@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import Axios from "axios";
 import "../safeher-css/safetymap.css";
+import { getAccurateLocation, getUserCityFallback } from "../utils/geoService";
 
 const safeIcon = new L.DivIcon({
   className: "safeher-map-icon",
@@ -51,10 +52,28 @@ function MyLocationControl({ onClick }) {
 }
 
 function SafetyMap() {
+  const [currentUser] = useState(() => {
+    try {
+      const raw = localStorage.getItem("mydata");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [safetyAreas, setSafetyAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState("");
-  const [mapCenter, setMapCenter] = useState([22.3072, 73.1812]);
+  const [mapCenter, setMapCenter] = useState(() => {
+    try {
+      const raw = localStorage.getItem("mydata");
+      const u = raw ? JSON.parse(raw) : null;
+      const fb = getUserCityFallback(u);
+      return [fb.lat, fb.lng];
+    } catch {
+      return [21.6032, 71.2221]; // Amreli coordinates as default
+    }
+  });
   const [searchLocation, setSearchLocation] = useState("");
   const [searchError, setSearchError] = useState("");
   const [userLocation, setUserLocation] = useState(null);
@@ -119,35 +138,20 @@ function SafetyMap() {
     setMapCenter([latitude, longitude]);
   };
 
-  const handleMyLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationError("Geolocation is not supported by your browser.");
-      return;
-    }
-
+  const handleMyLocation = async () => {
     setLocationError("");
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const coordinates = [
-          position.coords.latitude,
-          position.coords.longitude,
-        ];
-
-        setUserLocation(coordinates);
-        setMapCenter(coordinates);
-      },
-      () => {
-        setLocationError(
-          "Unable to get your location. Please allow location access.",
-        );
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      },
-    );
+    try {
+      const accurate = await getAccurateLocation(currentUser);
+      const coordinates = [accurate.lat, accurate.lng];
+      setUserLocation(coordinates);
+      setMapCenter(coordinates);
+    } catch (err) {
+      console.warn("handleMyLocation error:", err);
+      setLocationError(
+        "Unable to get your location. Please allow location access."
+      );
+    }
   };
 
   return (

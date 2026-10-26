@@ -1,8 +1,11 @@
+require("dotenv").config();
 const express = require("express"); //express is node.js framewrok that is used to create server/API.
 const http = require("http");
 const mongoose = require("mongoose"); //mongoose is used to connect to mongodb database.
 const cors = require("cors"); //cors is used to allow cross-origin requests between frontend and backend.
 const bodyParser = require("body-parser"); //body-parser is used to parse(read) the body data.
+const googleMailService = require("./services/googleMailService");
+const smsService = require("./services/smsService");
 const app = express(); //one express app is created to handle the requests and responses.
 const server = http.createServer(app);
 
@@ -147,6 +150,7 @@ const trustedContact = new mongoose.model(
     contactName: String,
     relationship: String,
     phoneNo: String,
+    email: { type: String, default: "" },
     priority: String,
   }),
 );
@@ -985,7 +989,7 @@ app.post("/api/womanlogin", async (req, res) => {
 //Trusted Contact API
 app.post("/api/addTrustedContact", async (req, res) => {
   try {
-    const { womanId, contactName, relationship, phoneNo, priority } = req.body;
+    const { womanId, contactName, relationship, phoneNo, email, priority } = req.body;
 
     if (!womanId || !contactName || !relationship || !phoneNo || !priority) {
       return res.status(400).json({
@@ -996,6 +1000,12 @@ app.post("/api/addTrustedContact", async (req, res) => {
     if (!/^[0-9]{10}$/.test(phoneNo)) {
       return res.status(400).json({
         message: "Phone number must contain exactly 10 digits.",
+      });
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({
+        message: "Please enter a valid email address.",
       });
     }
 
@@ -1015,6 +1025,7 @@ app.post("/api/addTrustedContact", async (req, res) => {
       contactName: contactName.trim(),
       relationship: relationship,
       phoneNo: phoneNo,
+      email: email ? email.trim().toLowerCase() : "",
       priority: priority,
     });
 
@@ -1072,7 +1083,7 @@ app.delete("/api/deleteTrustedContact/:_id", async (req, res) => {
 app.put("/api/editTrustedContact/:_id", async (req, res) => {
   try {
     const { _id } = req.params;
-    const { contactName, relationship, phoneNo, priority } = req.body;
+    const { contactName, relationship, phoneNo, email, priority } = req.body;
 
     // Validation
     if (!contactName || !relationship || !phoneNo || !priority) {
@@ -1085,6 +1096,12 @@ app.put("/api/editTrustedContact/:_id", async (req, res) => {
     if (!/^[0-9]{10}$/.test(phoneNo)) {
       return res.status(400).json({
         message: "Phone number must be a 10-digit number.",
+      });
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({
+        message: "Please enter a valid email address.",
       });
     }
 
@@ -1113,6 +1130,9 @@ app.put("/api/editTrustedContact/:_id", async (req, res) => {
     contact.contactName = contactName.trim();
     contact.relationship = relationship;
     contact.phoneNo = phoneNo;
+    if (email !== undefined) {
+      contact.email = email ? email.trim().toLowerCase() : "";
+    }
     contact.priority = priority;
 
     await contact.save();
@@ -1200,6 +1220,7 @@ app.post("/api/volunteerlogin", async (req, res) => {
       name: user.name,
       email: user.email,
       contact_no: user.contact_no || "",
+      profile_photo: user.profile_photo || "",
     });
   }
 
@@ -1893,6 +1914,7 @@ const sosAlert = mongoose.model(
     volunteerName: { type: String, default: null },
     volunteerEmail: { type: String, default: null },
     volunteerPhone: { type: String, default: null },
+    volunteerPhoto: { type: String, default: null },
     volunteerLat: { type: Number, default: null },
     volunteerLng: { type: Number, default: null },
     volunteerLocationShared: { type: Boolean, default: false },
@@ -2146,10 +2168,66 @@ app.post("/api/sos/create", async (req, res) => {
       io.to("volunteers_channel").emit("new_sos_alert", newAlert);
     }
 
+    // Send Emergency SOS Email to Trusted Contacts via Google Mail Service
+    const contacts = await trustedContact.find({ womanId });
+    try {
+      const recipientEmails = contacts
+        .map((c) => (c.email || "").trim())
+        .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+
+      if (recipientEmails.length > 0) {
+        googleMailService.sendSOSEmergencyEmail({
+          recipients: recipientEmails,
+          womanName: newAlert.womanName,
+          womanPhone: newAlert.womanPhone,
+          womanEmail: newAlert.womanEmail,
+          womanAddress: newAlert.womanAddress,
+          womanLat: newAlert.womanLat,
+          womanLng: newAlert.womanLng,
+          emergencyType: newAlert.emergencyType,
+        }).then((mailRes) => {
+          if (mailRes?.preview) {
+            console.log(`ℹ️ SOS email logged in preview mode for trusted contacts of ${newAlert.womanName}`);
+          } else if (mailRes?.success) {
+            console.log(`✅ SOS email sent via Google to ${recipientEmails.length} trusted contact(s) of ${newAlert.womanName}`);
+          }
+        }).catch((err) => {
+          console.error("❌ Failed to send SOS alert email to trusted contacts:", err.message);
+        });
+      } else {
+        console.warn(`⚠️ [SafeHer SOS] Woman user ${womanId} (${newAlert.womanName}) has ${contacts.length} trusted contact(s), but none have an email address configured yet.`);
+      }
+    } catch (mailErr) {
+      console.error("Error looking up trusted contacts for SOS email:", mailErr);
+    }
+
+    // Send Emergency SOS SMS to Trusted Contacts (Tier 1: Dev 100 SMS pack -> Tier 2: Fast2SMS -> Tier 3: Both exhausted alert)
+    let smsStatus = null;
+    try {
+      const recipientPhones = contacts
+        .map((c) => (c.phoneNo || "").trim())
+        .filter((p) => p && /^[0-9]{10}$/.test(p));
+
+      if (recipientPhones.length > 0) {
+        smsStatus = await smsService.sendSOSEmergencySMS({
+          phoneNumbers: recipientPhones,
+          womanName: newAlert.womanName,
+          womanAddress: newAlert.womanAddress,
+          womanLat: newAlert.womanLat,
+          womanLng: newAlert.womanLng,
+          womanPhone: newAlert.womanPhone,
+          emergencyType: newAlert.emergencyType,
+        });
+      }
+    } catch (smsErr) {
+      console.error("Error sending SOS SMS to trusted contacts:", smsErr);
+    }
+
     return res.status(201).json({
       message:
-        "Emergency SOS Alert created successfully! Location shared with volunteers.",
+        "Emergency SOS Alert created successfully! Location shared with volunteers and trusted contacts.",
       sos: newAlert,
+      smsStatus: smsStatus,
     });
   } catch (error) {
     console.error("Error creating SOS:", error);
@@ -2250,11 +2328,27 @@ app.put("/api/sos/approve/:id", async (req, res) => {
 
     const now = new Date();
 
+    // Query volunteer record to fetch verified profile photo and information
+    let volRecord = null;
+    try {
+      if (mongoose.Types.ObjectId.isValid(volunteerId)) {
+        volRecord = await volunteer.findById(volunteerId);
+      } else {
+        volRecord = await volunteer.findOne({
+          $or: [{ _id: volunteerId }, { email: volunteerEmail }, { name: volunteerName }],
+        });
+      }
+    } catch (_) {}
+
+    const resolvedPhoto =
+      req.body.volunteerPhoto || volRecord?.profile_photo || existingSos.volunteerPhoto || null;
+
     const updateFields = {
       volunteerId,
-      volunteerName: volunteerName || "Responding Volunteer",
-      volunteerEmail: volunteerEmail || existingSos.volunteerEmail,
-      volunteerPhone: volunteerPhone || existingSos.volunteerPhone,
+      volunteerName: volunteerName || volRecord?.name || "Responding Volunteer",
+      volunteerEmail: volunteerEmail || volRecord?.email || existingSos.volunteerEmail,
+      volunteerPhone: volunteerPhone || volRecord?.contact_no || existingSos.volunteerPhone,
+      volunteerPhoto: resolvedPhoto,
       status: "Approved",
       acceptedAt: existingSos.acceptedAt || now,
       updatedAt: now,
@@ -2300,10 +2394,67 @@ app.put("/api/sos/approve/:id", async (req, res) => {
       io.to("volunteers_channel").emit("sos_updated", sos);
     }
 
+    // Send Volunteer Assigned Update Email to Trusted Contacts via Google Mail Service
+    try {
+      const contacts = await trustedContact.find({ womanId: sos.womanId });
+      const recipientEmails = contacts
+        .map((c) => (c.email || "").trim())
+        .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+
+      if (recipientEmails.length > 0) {
+        googleMailService.sendSOSVolunteerAssignedEmail({
+          recipients: recipientEmails,
+          womanName: sos.womanName,
+          womanPhone: sos.womanPhone,
+          womanAddress: sos.womanAddress,
+          womanLat: sos.womanLat,
+          womanLng: sos.womanLng,
+          volunteerName: sos.volunteerName,
+          volunteerPhoto: sos.volunteerPhoto,
+          volunteerPhone: sos.volunteerPhone,
+          volunteerEmail: sos.volunteerEmail,
+          distance: sos.distance,
+        }).then((mailRes) => {
+          if (mailRes?.preview) {
+            console.log(`ℹ️ Volunteer Assigned email preview logged for trusted contacts of ${sos.womanName}`);
+          } else if (mailRes?.success) {
+            console.log(`✅ Volunteer Assigned email sent via Google to ${recipientEmails.length} trusted contact(s) of ${sos.womanName}`);
+          }
+        }).catch((err) => {
+          console.error("❌ Failed to send volunteer assigned email to trusted contacts:", err.message);
+        });
+      }
+    } catch (mailErr) {
+      console.error("Error looking up trusted contacts for volunteer assignment email:", mailErr);
+    }
+
+    // Send Volunteer Assigned SMS to Trusted Contacts (Tier 1: Dev 100 SMS pack -> Tier 2: Fast2SMS -> Tier 3: Both exhausted alert)
+    let smsStatus = null;
+    try {
+      const contacts = await trustedContact.find({ womanId: sos.womanId });
+      const recipientPhones = contacts
+        .map((c) => (c.phoneNo || "").trim())
+        .filter((p) => p && /^[0-9]{10}$/.test(p));
+
+      if (recipientPhones.length > 0) {
+        smsStatus = await smsService.sendSOSVolunteerAssignedSMS({
+          phoneNumbers: recipientPhones,
+          womanName: sos.womanName,
+          volunteerName: sos.volunteerName,
+          volunteerPhone: sos.volunteerPhone,
+          volunteerEmail: sos.volunteerEmail,
+          distance: sos.distance,
+        });
+      }
+    } catch (smsErr) {
+      console.error("Error sending volunteer assigned SMS:", smsErr);
+    }
+
     return res.status(200).json({
       message:
         "SOS request approved! You are assigned as the responding volunteer.",
       sos,
+      smsStatus: smsStatus,
     });
   } catch (error) {
     console.error("Error approving SOS:", error);

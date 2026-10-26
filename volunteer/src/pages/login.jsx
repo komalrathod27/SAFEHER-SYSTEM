@@ -65,6 +65,7 @@ function VolunteerLogin() {
             email: user.email,
             name: user.name,
             contact_no: user.contact_no || "",
+            profile_photo: user.profile_photo || "",
           };
 
           sessionStorage.setItem("mydata", JSON.stringify(data));

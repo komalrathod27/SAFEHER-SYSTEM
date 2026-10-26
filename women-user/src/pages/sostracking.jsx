@@ -1565,6 +1565,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Axios from "axios";
 import Swal from "sweetalert2";
 import { io } from "socket.io-client";
+import { getAccurateLocation, reverseGeocode, getUserCityFallback } from "../utils/geoService";
 
 // Precise Haversine distance calculator
 function computeDistance(lat1, lon1, lat2, lon2) {
@@ -1830,8 +1831,24 @@ function SOSTracking() {
     }
 
     watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
+      async (pos) => {
+        let latitude = pos.coords.latitude;
+        let longitude = pos.coords.longitude;
+        const accuracy = pos.coords.accuracy || 0;
+
+        // Detect and fix ISP Gateway routing to Rajkot on devices without GPS in Saurashtra
+        const isRajkotArea =
+          Math.abs(latitude - 22.3039) < 0.25 && Math.abs(longitude - 70.8022) < 0.25;
+        const isUserInAmreli =
+          user?.city === "Amreli" ||
+          (user?.address && user.address.toLowerCase().includes("amreli"));
+
+        if (accuracy > 3500 && isRajkotArea && isUserInAmreli) {
+          latitude = 21.6032;
+          longitude = 71.2221;
+        }
+
+        const address = await reverseGeocode(latitude, longitude);
 
         // 1. Emit live location via Socket.IO for 0-latency instant delivery
         if (socketRef.current && socketRef.current.connected) {
@@ -1839,19 +1856,20 @@ function SOSTracking() {
             sosId: activeSos._id,
             womanLat: latitude,
             womanLng: longitude,
+            womanAddress: address,
           });
         }
 
         // 2. Persist update in database via API
         Axios.put(
           `http://localhost:3000/api/sos/update-woman-location/${activeSos._id}`,
-          { womanLat: latitude, womanLng: longitude },
+          { womanLat: latitude, womanLng: longitude, womanAddress: address },
         ).catch(() => {});
       },
       (err) => {
         console.warn("Geolocation watch warning:", err.message);
       },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
     );
 
     return () => {
@@ -1977,8 +1995,9 @@ function SOSTracking() {
     const L = window.L;
     if (!L) return;
 
-    const wLat = activeSos ? activeSos.womanLat : 22.3072;
-    const wLng = activeSos ? activeSos.womanLng : 73.1812;
+    const fallback = getUserCityFallback(user);
+    const wLat = activeSos?.womanLat || fallback.lat;
+    const wLng = activeSos?.womanLng || fallback.lng;
 
     // Create Map if not exists
     if (!mapInstanceRef.current) {
@@ -2125,29 +2144,50 @@ function SOSTracking() {
         },
       });
 
-      const onLocationSuccess = async (position) => {
-        const { latitude, longitude } = position.coords;
+      getAccurateLocation(user).then(async (loc) => {
         try {
           const res = await Axios.post("http://localhost:3000/api/sos/create", {
             womanId: user.user_id,
             womanName: user.fullName,
             womanEmail: user.email,
             womanPhone: user.phoneNumber || "",
-            womanLat: latitude,
-            womanLng: longitude,
-            womanAddress: "Live GPS Location",
+            womanLat: loc.lat,
+            womanLng: loc.lng,
+            womanAddress: loc.address,
             emergencyType: "Emergency SOS - Immediate Help Needed",
           });
 
-          Swal.fire({
-            icon: "success",
-            title: "SOS Alert Broadcasted!",
-            text: "Your live location has been shared with volunteers. Stay calm, help is on the way.",
-            confirmButtonColor: "#2563eb",
-          });
-
+          const smsStatus = res.data.smsStatus;
           setActiveSos(res.data.sos);
           localStorage.setItem("activeSosId", res.data.sos._id);
+
+          if (smsStatus && !smsStatus.success && smsStatus.devExhausted && smsStatus.gatewayExhausted) {
+            Swal.fire({
+              icon: "warning",
+              title: "⚠️ SMS Delivery Warning!",
+              html: `
+                <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+                  <p style="color: #dc2626; font-weight: 800; font-size: 16px; margin-bottom: 8px;">
+                    🚨 Bhai dono ka hi recharge nahi hai!
+                  </p>
+                  <p style="margin-bottom: 8px; color: #334155;">
+                    Dev ke number ka 100 SMS/day recharge pack bhi khatam ho gaya hai aur SMS Gateway ka bhi recharge nahi hai, isiliye SMS nahi ja paya!
+                  </p>
+                  <p style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 10px; border-radius: 6px; color: #991b1b; font-weight: 600; margin: 0;">
+                    Email alert bhej diya gaya hai. Kripya turant Emergency Helpline 112 par direct call karein!
+                  </p>
+                </div>
+              `,
+              confirmButtonColor: "#dc2626",
+            });
+          } else {
+            Swal.fire({
+              icon: "success",
+              title: "SOS Alert Broadcasted!",
+              text: `Your live location (${loc.address}) has been shared with volunteers and trusted contacts. Help is on the way.`,
+              confirmButtonColor: "#2563eb",
+            });
+          }
         } catch (err) {
           Swal.fire({
             icon: "error",
@@ -2157,50 +2197,7 @@ function SOSTracking() {
               "Server error while triggering SOS.",
           });
         }
-      };
-
-      const onLocationError = (err) => {
-        // Fallback default coordinates (Vadodara city center) for testing
-        const fallbackLat = 22.3072;
-        const fallbackLng = 73.1812;
-        Axios.post("http://localhost:3000/api/sos/create", {
-          womanId: user.user_id,
-          womanName: user.fullName,
-          womanEmail: user.email,
-          womanPhone: user.phoneNumber || "",
-          womanLat: fallbackLat,
-          womanLng: fallbackLng,
-          womanAddress: "Detected City Location (Default GPS)",
-          emergencyType: "Emergency SOS - Immediate Help Needed",
-        })
-          .then((res) => {
-            Swal.fire({
-              icon: "warning",
-              title: "SOS Alert Broadcasted (Default Location)",
-              text: `GPS access unavailable (${err.message}). Used default safety coordinates so volunteers can respond.`,
-              confirmButtonColor: "#2563eb",
-            });
-            setActiveSos(res.data.sos);
-            localStorage.setItem("activeSosId", res.data.sos._id);
-          })
-          .catch(() => {
-            Swal.fire({
-              icon: "error",
-              title: "Error",
-              text: "Could not trigger SOS. Please check server connection.",
-            });
-          });
-      };
-
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          onLocationSuccess,
-          onLocationError,
-          { enableHighAccuracy: true, timeout: 10000 },
-        );
-      } else {
-        onLocationError(new Error("Browser does not support Geolocation"));
-      }
+      });
     });
   };
 
