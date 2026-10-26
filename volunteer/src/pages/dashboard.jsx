@@ -1,774 +1,790 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Axios from "axios";
 import { io } from "socket.io-client";
+import {
+  Activity,
+  ArrowRight,
+  ArrowUpRight,
+  Award,
+  Bell,
+  CalendarCheck2,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  FileWarning,
+  HeartHandshake,
+  MapPin,
+  RefreshCw,
+  ShieldCheck,
+  Siren,
+  Users,
+} from "lucide-react";
+import { getVolunteerId } from "../utils/volunteerIdentity";
+import "../volunteer-css/dashboard.css";
+
+const API = "http://localhost:3000";
+
+const INCIDENTS_URL = `${API}/api/getverifiedincidentreports`;
+
+const routes = {
+  sos: "/sosrequests",
+  responses: "/responses",
+  trust: "/trustscore",
+  badges: "/badges",
+  history: "/history",
+  incidents: "/incidentreports",
+};
+
+function readVolunteer() {
+  try {
+    const raw =
+      localStorage.getItem("mydata") || sessionStorage.getItem("mydata");
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function formatDate(date) {
+  return new Date(date).toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function timeAgo(date) {
+  if (!date) return "";
+  const value = new Date(date).getTime();
+  if (Number.isNaN(value)) return "";
+
+  const minutes = Math.max(0, Math.floor((Date.now() - value) / 60000));
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} days ago`;
+
+  return new Date(date).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+function getStatus(status = "") {
+  const value = String(status).toLowerCase();
+  if (value === "pending") return "pending";
+  if (["approved", "active"].includes(value)) return "active";
+  if (["resolved", "cancelled", "rejected"].includes(value)) return "closed";
+  return "other";
+}
 
 function Dashboard() {
   const navigate = useNavigate();
-  const [activeSOSList, setActiveSOSList] = useState([]);
-  const [activeCount, setActiveCount] = useState(0);
+
+  const [volunteerId] = useState(() => getVolunteerId());
+  const [volunteer] = useState(() => readVolunteer());
+
+  const [sosRequests, setSosRequests] = useState([]);
+  const [performance, setPerformance] = useState(null);
+  const [badges, setBadges] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [incidents, setIncidents] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [live, setLive] = useState(false);
+  const [filter, setFilter] = useState("all");
+
+  const volunteerName =
+    volunteer.name ||
+    volunteer.fullName ||
+    volunteer.user_name ||
+    volunteer.volunteerName ||
+    "Volunteer";
+
+  const firstName = volunteerName.trim().split(/\s+/)[0];
+
+  async function loadDashboard(showLoader = false) {
+    if (!volunteerId) {
+      setErrors({
+        identity: "Volunteer information not found. Please log in again.",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (showLoader) setRefreshing(true);
+
+    const jobs = [
+      {
+        key: "sos",
+        url: `${API}/api/sos/all`,
+        update: (data) =>
+          setSosRequests(Array.isArray(data.requests) ? data.requests : []),
+      },
+      {
+        key: "performance",
+        url: `${API}/api/sos/trust-score/${volunteerId}`,
+        update: (data) => setPerformance(data),
+      },
+      {
+        key: "badges",
+        url: `${API}/api/volunteer-badges/${volunteerId}`,
+        update: (data) =>
+          setBadges(Array.isArray(data.badges) ? data.badges : []),
+      },
+      {
+        key: "activities",
+        url: `${API}/api/volunteer-activity/${volunteerId}`,
+        update: (data) =>
+          setActivities(Array.isArray(data.activities) ? data.activities : []),
+      },
+      {
+        key: "incidents",
+        url: INCIDENTS_URL,
+        update: (data) => {
+          setIncidents(Array.isArray(data) ? data : []);
+        },
+      },
+    ];
+
+    const nextErrors = {};
+
+    await Promise.all(
+      jobs.map(async (job) => {
+        try {
+          const response = await fetch(job.url);
+          if (!response.ok) throw new Error(`Unable to load ${job.key}.`);
+          const data = await response.json();
+          job.update(data);
+        } catch (error) {
+          nextErrors[job.key] = error.message;
+        }
+      }),
+    );
+
+    setErrors(nextErrors);
+    setLoading(false);
+    setRefreshing(false);
+  }
 
   useEffect(() => {
-    const fetchSOS = () => {
-      Axios.get("http://localhost:3000/api/sos/all")
-        .then((res) => {
-          if (res.data && res.data.requests) {
-            const list = res.data.requests.slice(0, 5).map((r) => {
-              const dt = new Date(r.createdAt);
-              return {
-                id: `SOS-${r._id.slice(-4).toUpperCase()}`,
-                location: r.womanAddress || "GPS Coordinates",
-                time: dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                status: r.status,
-              };
-            });
-            setActiveSOSList(list);
-            setActiveCount(res.data.pendingCount + res.data.activeCount);
-          }
-        })
-        .catch(() => {});
-    };
+    loadDashboard();
 
-    fetchSOS();
-
-    // Socket.IO real-time listener (Replaced Polling)
-    const socket = io("http://localhost:3000", {
-      transports: ["polling", "websocket"],
-    });
+    const socket = io(API, { transports: ["polling", "websocket"] });
 
     socket.on("connect", () => {
+      setLive(true);
       socket.emit("join_volunteers");
     });
+    socket.on("disconnect", () => setLive(false));
 
-    socket.on("new_sos_alert", fetchSOS);
-    socket.on("sos_updated", fetchSOS);
-    socket.on("sos_approved", fetchSOS);
-    socket.on("sos_resolved", fetchSOS);
-    socket.on("sos_cancelled", fetchSOS);
+    [
+      "new_sos_alert",
+      "sos_updated",
+      "sos_approved",
+      "sos_resolved",
+      "sos_cancelled",
+    ].forEach((event) => socket.on(event, () => loadDashboard()));
 
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
+    return () => socket.disconnect();
+  }, [volunteerId]);
+
+  const pendingRequests = sosRequests.filter(
+    (r) => getStatus(r.status) === "pending",
+  );
+  const activeRequests = sosRequests.filter(
+    (r) => getStatus(r.status) === "active",
+  );
+  const activeSOSCount = pendingRequests.length + activeRequests.length;
+
+  const resolvedCount = Number(performance?.performance?.resolvedRequests ?? 0);
+  const acceptedCount = Number(performance?.performance?.acceptedRequests ?? 0);
+  const trustScore = Number(performance?.trustScore ?? 0);
+  const trustPct = Math.min(100, Math.max(0, trustScore));
+  const averageResponseTime = performance?.performance?.averageResponseTime;
+
+  const earnedBadges = badges.filter((b) => b.earned);
+  const lockedBadges = badges.filter((b) => !b.earned);
+
+  const recentActivities = [...activities]
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .slice(0, 3);
+
+  const openSOS = [...sosRequests]
+    .filter((r) =>
+      ["pending", "approved", "active"].includes(
+        String(r.status).toLowerCase(),
+      ),
+    )
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  const visibleSOS = openSOS
+    .filter((r) => filter === "all" || getStatus(r.status) === filter)
+    .slice(0, 5);
 
   const stats = [
     {
-      icon: "🚨",
-      title: "Active SOS",
-      value: activeCount > 0 ? `${activeCount}` : "0",
-      description: "Requests needing attention",
-      type: "danger",
+      title: "Incident reports",
+      value: errors.incidents ? "—" : incidents.length,
+      detail: "Reports you have filed",
+      icon: FileWarning,
+      tone: "rose",
+      path: routes.incidents,
     },
     {
-      icon: "✓",
-      title: "Resolved",
-      value: "14",
-      description: "Emergencies successfully resolved",
-      type: "success",
+      title: "Successful resolutions",
+      value: errors.performance ? "—" : resolvedCount,
+      detail: "SOS requests you resolved",
+      icon: CheckCircle2,
+      tone: "green",
+      path: routes.responses,
     },
     {
-      icon: "⚡",
-      title: "Avg. Response",
-      value: "3.4 min",
-      description: "Your average response time",
-      type: "warning",
+      title: "Trust score",
+      value: errors.performance ? "—" : trustScore,
+      suffix: errors.performance ? "" : "/100",
+      detail: performance?.trustLevel || "Your volunteer trust level",
+      icon: ShieldCheck,
+      tone: "violet",
+      path: routes.trust,
     },
     {
-      icon: "🛡️",
-      title: "Trust Score",
-      value: "92/100",
-      description: "Excellent volunteer rating",
-      type: "primary",
+      title: "Average response",
+      value: errors.performance
+        ? "—"
+        : averageResponseTime == null
+          ? "N/A"
+          : averageResponseTime,
+      suffix: errors.performance || averageResponseTime == null ? "" : " min",
+      detail: "Based on your recorded responses",
+      icon: Clock3,
+      tone: "amber",
+      path: routes.trust,
     },
   ];
 
-  const activeSOS = activeSOSList.length > 0 ? activeSOSList : [
+  const shortcuts = [
     {
-      id: "SOS-024",
-      location: "Karelibaug, Vadodara",
-      time: "2 min ago",
-      status: "Pending",
+      label: "SOS Requests",
+      hint: "Respond to alerts",
+      icon: Siren,
+      path: routes.sos,
     },
     {
-      id: "SOS-023",
-      location: "Alkapuri, Vadodara",
-      time: "5 min ago",
-      status: "Accepted",
+      label: "My Responses",
+      hint: "Your handled cases",
+      icon: CheckCircle2,
+      path: routes.responses,
+    },
+    {
+      label: "Trust Score",
+      hint: "See how it's built",
+      icon: ShieldCheck,
+      path: routes.trust,
+    },
+    {
+      label: "Activity History",
+      hint: "Everything you did",
+      icon: Activity,
+      path: routes.history,
     },
   ];
 
-  const recentActivities = [
-    {
-      icon: "🚨",
-      title: "Responded to SOS Request",
-      description: "SOS-024 • Emergency assistance",
-      time: "10:42 AM",
-    },
-    {
-      icon: "✓",
-      title: "SOS Request Resolved",
-      description: "SOS-021 • Assistance completed",
-      time: "09:55 AM",
-    },
-    {
-      icon: "🤝",
-      title: "Joined Volunteer Coordination",
-      description: "Community safety activity",
-      time: "Yesterday",
-    },
-    {
-      icon: "🏅",
-      title: 'Earned "Fast Responder" badge',
-      description: "Achievement unlocked",
-      time: "28 Aug",
-    },
-  ];
+  if (loading) {
+    return (
+      <main className="vd-page">
+        <div className="vd-state">
+          <div className="vd-spinner" />
+          <h2>Preparing your dashboard</h2>
+          <p>Loading your SafeHer volunteer information...</p>
+        </div>
+      </main>
+    );
+  }
 
-  const badges = [
-    {
-      icon: "⚡",
-      name: "Fast Responder",
-    },
-    {
-      icon: "🛡️",
-      name: "Trusted Helper",
-    },
-    {
-      icon: "⭐",
-      name: "Community Star",
-    },
-  ];
-
-  // =========================================
-  // STYLES
-  // =========================================
-
-  const styles = {
-    page: {
-      minHeight: "100vh",
-      background: "#f6f8f7",
-      padding: "30px",
-      fontFamily: "Arial, sans-serif",
-      boxSizing: "border-box",
-    },
-
-    // =========================================
-    // HEADER
-    // =========================================
-
-    header: {
-      marginBottom: "25px",
-    },
-
-    title: {
-      margin: 0,
-      fontSize: "32px",
-      fontWeight: "700",
-      color: "#123c45",
-      lineHeight: "1.3",
-    },
-
-    subtitle: {
-      margin: "8px 0 0",
-      fontSize: "15px",
-      color: "#718096",
-      lineHeight: "1.6",
-    },
-
-    // ============STAT CARDS===============
-
-    statsGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(4, 1fr)",
-      gap: "18px",
-      marginBottom: "25px",
-    },
-
-    statCard: {
-      background: "#ffffff",
-      borderRadius: "10px",
-      border: "1px solid #e4ebe8",
-      padding: "20px",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
-    },
-
-    statTop: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: "15px",
-    },
-
-    statIcon: {
-      width: "42px",
-      height: "42px",
-      borderRadius: "9px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: "19px",
-      background: "#eef7f3",
-    },
-
-    statLabel: {
-      fontSize: "14px",
-      fontWeight: "600",
-      color: "#7b8794",
-      marginBottom: "5px",
-    },
-
-    statValue: {
-      fontSize: "29px",
-      fontWeight: "700",
-      color: "#173f48",
-      marginBottom: "5px",
-    },
-
-    statDescription: {
-      margin: 0,
-      fontSize: "12px",
-      color: "#9aa5ad",
-    },
-
-    // =========================================
-    // MAIN GRID
-    // =========================================
-
-    mainGrid: {
-      display: "grid",
-      gridTemplateColumns: "1.5fr 1fr",
-      gap: "20px",
-      marginBottom: "20px",
-    },
-
-    card: {
-      background: "#ffffff",
-      border: "1px solid #e4ebe8",
-      borderRadius: "10px",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
-      overflow: "hidden",
-    },
-
-    cardHeader: {
-      padding: "20px",
-      borderBottom: "1px solid #edf1ef",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-    },
-
-    cardTitle: {
-      margin: 0,
-      fontSize: "18px",
-      fontWeight: "700",
-      color: "#173f48",
-    },
-
-    viewAll: {
-      border: "none",
-      background: "transparent",
-      color: "#159b72",
-      fontSize: "13px",
-      fontWeight: "600",
-      cursor: "pointer",
-      padding: "3px 0",
-    },
-
-    // =========================================
-    // SOS REQUESTS
-    // =========================================
-
-    sosItem: {
-      padding: "17px 20px",
-      borderBottom: "1px solid #f0f2f1",
-      display: "flex",
-      alignItems: "center",
-      gap: "12px",
-    },
-
-    sosIcon: {
-      width: "39px",
-      height: "39px",
-      borderRadius: "8px",
-      background: "#fff1f1",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: "18px",
-      flexShrink: 0,
-    },
-
-    sosInfo: {
-      flex: 1,
-    },
-
-    sosId: {
-      margin: 0,
-      fontSize: "13px",
-      fontWeight: "700",
-      color: "#273f46",
-    },
-
-    sosLocation: {
-      margin: "5x 0 0",
-      fontSize: "11px",
-      color: "#8b969d",
-    },
-
-    sosTime: {
-      fontSize: "10px",
-      color: "#9aa5ad",
-      marginBottom: "6px",
-      textAlign: "right",
-    },
-
-    status: {
-      padding: "5px 9px",
-      borderRadius: "15px",
-      fontSize: "10px",
-      fontWeight: "600",
-      display: "inline-block",
-    },
-
-    pending: {
-      background: "#fff7e6",
-      color: "#c98200",
-    },
-
-    accepted: {
-      background: "#e8f7f0",
-      color: "#16845f",
-    },
-
-    // =========================================
-    // PERFORMANCE
-    // =========================================
-
-    performanceBody: {
-      padding: "22px",
-    },
-
-    trustRow: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: "9px",
-    },
-
-    trustLabel: {
-      fontSize: "12px",
-      color: "#718096",
-      fontWeight: "600",
-    },
-
-    trustValue: {
-      fontSize: "15px",
-      fontWeight: "700",
-      color: "#159b72",
-    },
-
-    progressBackground: {
-      height: "8px",
-      background: "#e9efed",
-      borderRadius: "20px",
-      overflow: "hidden",
-      marginBottom: "25px",
-    },
-
-    progress: {
-      height: "100%",
-      width: "92%",
-      background: "#159b72",
-      borderRadius: "20px",
-    },
-
-    performanceItem: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: "13px 0",
-      borderTop: "1px solid #edf1ef",
-    },
-
-    performanceLabel: {
-      fontSize: "12px",
-      color: "#718096",
-      fontWeight: "550",
-    },
-
-    performanceValue: {
-      fontSize: "13px",
-      fontWeight: "700",
-      color: "#263f46",
-    },
-
-    // =========================================
-    // RECENT ACTIVITY
-    // =========================================
-
-    activityBody: {
-      padding: "5px 20px",
-    },
-
-    activityItem: {
-      display: "flex",
-      gap: "14px",
-      padding: "15px 0",
-      borderBottom: "1px solid #f0f2f1",
-    },
-
-    activityIcon: {
-      width: "39px",
-      height: "39px",
-      borderRadius: "50%",
-      background: "#eef7f3",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: "18px",
-      flexShrink: 0,
-    },
-
-    activityInfo: {
-      flex: 1,
-    },
-
-    activityTitle: {
-      margin: 0,
-      fontSize: "12px",
-      fontWeight: "700",
-      color: "#344b52",
-    },
-
-    activityDescription: {
-      margin: "5px 0 0",
-      fontSize: "11px",
-      color: "#8b969d",
-    },
-
-    activityTime: {
-      fontSize: "10px",
-      color: "#a0a9ae",
-      whiteSpace: "nowrap",
-    },
-
-    // =========================================
-    // BOTTOM GRID
-    // =========================================
-
-    bottomGrid: {
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: "20px",
-    },
-
-    // =========================================
-    // BADGES
-    // =========================================
-
-    badgeBody: {
-      padding: "20px",
-      display: "flex",
-      gap: "15px",
-    },
-
-    badge: {
-      flex: 1,
-      textAlign: "center",
-      padding: "15px 8px",
-      borderRadius: "8px",
-      background: "#f8faf9",
-      border: "1px solid #edf1ef",
-    },
-
-    badgeIcon: {
-      fontSize: "33px",
-      marginBottom: "6px",
-    },
-
-    badgeName: {
-      fontSize: "12.5px",
-      fontWeight: "600",
-      color: "#53666d",
-      lineHeight: "1.3",
-    },
-
-    // =========================================
-    // QUICK ACTIONS
-    // =========================================
-
-    actionsBody: {
-      padding: "20px",
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: "12px",
-    },
-
-    actionButton: {
-      border: "1px solid #dce8e3",
-      background: "#ffffff",
-      borderRadius: "7px",
-      padding: "13px",
-      textAlign: "left",
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      gap: "9px",
-      color: "#304c54",
-      fontSize: "12px",
-      fontWeight: "550",
-    },
-
-    actionIcon: {
-      fontSize: "20px",
-    },
-  };
+  if (errors.identity) {
+    return (
+      <main className="vd-page">
+        <div className="vd-state vd-error">
+          <ShieldCheck size={36} />
+          <h2>Volunteer session unavailable</h2>
+          <p>{errors.identity}</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <div style={styles.page}>
-      {/* =========================================
-          PAGE HEADER
-      ========================================= */}
-
-      <div style={styles.header}>
-        <h1 style={styles.title}>Welcome back, Volunteer! 👋</h1>
-
-        <p style={styles.subtitle}>
-          Here's an overview of your SafeHer volunteer activity and community
-          contribution.
-        </p>
-      </div>
-
-      {/* =========================================
-          STAT CARDS
-      ========================================= */}
-
-      <div style={styles.statsGrid}>
-        {stats.map((item, index) => (
-          <div key={index} style={styles.statCard}>
-            <div style={styles.statTop}>
-              <div style={styles.statIcon}>{item.icon}</div>
+    <main className="vd-page">
+      <div className="vd-container">
+        {/* ---------- Top bar ---------- */}
+        <header className="vd-topbar">
+          <div className="vd-brand">
+            <div className="vd-brand-icon">
+              <HeartHandshake size={24} />
             </div>
-
-            <div style={styles.statLabel}>{item.title}</div>
-
-            <div style={styles.statValue}>{item.value}</div>
-
-            <p style={styles.statDescription}>{item.description}</p>
+            <div>
+              <strong>SafeHer</strong>
+            </div>
           </div>
-        ))}
-      </div>
 
-      {/* =========================================
-          SOS + PERFORMANCE
-      ========================================= */}
-
-      <div style={styles.mainGrid}>
-        {/* ACTIVE SOS */}
-
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <h2 style={styles.cardTitle}>Active SOS Requests</h2>
+          <div className="vd-topbar-right">
+            <span className={`vd-live ${live ? "on" : ""}`}>
+              <i /> {live ? "Live updates on" : "Reconnecting"}
+            </span>
 
             <button
-              style={styles.viewAll}
-              onClick={() => navigate("/sosrequests")}
+              type="button"
+              className="vd-refresh"
+              onClick={() => loadDashboard(true)}
+              disabled={refreshing}
             >
-              View All →
+              <RefreshCw size={15} className={refreshing ? "vd-spin" : ""} />
+              <span>{refreshing ? "Refreshing" : "Refresh"}</span>
             </button>
           </div>
+        </header>
 
-          {activeSOS.map((sos) => (
-            <div
-              key={sos.id}
-              style={styles.sosItem}
-              onClick={() => navigate("/sosrequests")}
-            >
-              <div style={styles.sosIcon}>🚨</div>
+        {/* ---------- Greeting ---------- */}
+        <section className="vd-greeting">
+          <span className="vd-date">
+            <CalendarCheck2 size={14} /> {formatDate(new Date())}
+          </span>
+          <h1>
+            {greeting()}, <span>{firstName}.</span>
+          </h1>
+        </section>
 
-              <div style={styles.sosInfo}>
-                <p style={styles.sosId}>{sos.id}</p>
+        {/* ---------- Stats ---------- */}
+        <section className="vd-stats-grid">
+          {stats.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                type="button"
+                key={item.title}
+                className="vd-stat-card"
+                onClick={() => navigate(item.path)}
+              >
+                <div className="vd-stat-top">
+                  <span className={`vd-stat-icon ${item.tone}`}>
+                    <Icon size={20} />
+                  </span>
+                  <ArrowUpRight size={17} className="vd-stat-arrow" />
+                </div>
+                <span className="vd-stat-title">{item.title}</span>
+                <strong className="vd-stat-value">
+                  {item.value}
+                  {item.suffix && <em>{item.suffix}</em>}
+                </strong>
+                <span className="vd-stat-detail">{item.detail}</span>
+                <span className={`vd-stat-bar ${item.tone}`} />
+              </button>
+            );
+          })}
+        </section>
 
-                <p style={styles.sosLocation}>📍 {sos.location}</p>
+        {/* ---------- Main grid ---------- */}
+        <section className="vd-main-grid">
+          {/* SOS list */}
+          <article className="vd-panel">
+            <div className="vd-panel-heading">
+              <div className="vd-panel-title-icon">
+                <Siren size={19} />
               </div>
-
               <div>
-                <div style={styles.sosTime}>{sos.time}</div>
+                <h2>Current SOS requests</h2>
+                <p>Latest requests available in the system</p>
+              </div>
+              <button
+                type="button"
+                className="vd-text-link"
+                onClick={() => navigate(routes.sos)}
+              >
+                View all <ArrowRight size={14} />
+              </button>
+            </div>
 
-                <span
-                  style={{
-                    ...styles.status,
-                    ...(sos.status === "Pending"
-                      ? styles.pending
-                      : styles.accepted),
-                  }}
+            <div className="vd-tabs" role="tablist">
+              {[
+                { key: "all", label: "All", count: openSOS.length },
+                {
+                  key: "pending",
+                  label: "Pending",
+                  count: pendingRequests.length,
+                },
+                {
+                  key: "active",
+                  label: "Active",
+                  count: activeRequests.length,
+                },
+              ].map((tab) => (
+                <button
+                  type="button"
+                  role="tab"
+                  key={tab.key}
+                  aria-selected={filter === tab.key}
+                  className={filter === tab.key ? "is-active" : ""}
+                  onClick={() => setFilter(tab.key)}
                 >
-                  {sos.status}
+                  {tab.label} <span>{tab.count}</span>
+                </button>
+              ))}
+            </div>
+
+            {errors.sos ? (
+              <div className="vd-empty">
+                <p>Unable to load SOS requests.</p>
+              </div>
+            ) : visibleSOS.length === 0 ? (
+              <div className="vd-empty">
+                <span className="vd-empty-icon">
+                  <CheckCircle2 size={24} />
                 </span>
+                <h3>All clear</h3>
+                <p>
+                  There are no {filter === "all" ? "pending or active" : filter}{" "}
+                  SOS requests to display.
+                </p>
               </div>
-            </div>
-          ))}
-        </div>
+            ) : (
+              <div className="vd-sos-list">
+                {visibleSOS.map((request) => {
+                  const status = getStatus(request.status);
+                  const requestId = request._id
+                    ? `SOS-${request._id.slice(-5).toUpperCase()}`
+                    : "SOS request";
 
-        {/* PERFORMANCE */}
+                  return (
+                    <button
+                      type="button"
+                      key={request._id || requestId}
+                      className="vd-sos-row"
+                      onClick={() => navigate(routes.sos)}
+                    >
+                      <span className={`vd-sos-mark ${status}`}>
+                        <Siren size={18} />
+                        {status === "pending" && <i className="vd-pulse" />}
+                      </span>
 
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <h2 style={styles.cardTitle}>My Performance</h2>
+                      <span className="vd-sos-info">
+                        <strong>{requestId}</strong>
+                        <span>
+                          <MapPin size={13} />
+                          {request.womanAddress ||
+                            "Location details unavailable"}
+                        </span>
+                      </span>
 
-            <button
-              style={styles.viewAll}
-              onClick={() => navigate("/trustscore")}
-            >
-              View Details →
-            </button>
-          </div>
+                      <span className="vd-sos-end">
+                        <span className={`vd-status ${status}`}>
+                          {request.status}
+                        </span>
+                        <small>{timeAgo(request.createdAt)}</small>
+                      </span>
 
-          <div style={styles.performanceBody}>
-            <div style={styles.trustRow}>
-              <span style={styles.trustLabel}>Trust Score</span>
+                      <ChevronRight size={16} className="vd-sos-chevron" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-              <span style={styles.trustValue}>92 / 100</span>
-            </div>
-
-            <div style={styles.progressBackground}>
-              <div style={styles.progress} />
-            </div>
-
-            <div style={styles.performanceItem}>
-              <span style={styles.performanceLabel}>SOS Responses</span>
-
-              <span style={styles.performanceValue}>18</span>
-            </div>
-
-            <div style={styles.performanceItem}>
-              <span style={styles.performanceLabel}>
-                Successful Resolutions
+            <div className="vd-panel-footer">
+              <span>
+                <Bell size={14} /> Stay attentive to new requests
               </span>
-
-              <span style={styles.performanceValue}>14</span>
+              <strong>{activeSOSCount} open</strong>
             </div>
+          </article>
 
-            <div style={styles.performanceItem}>
-              <span style={styles.performanceLabel}>Average Response Time</span>
-
-              <span style={styles.performanceValue}>3.4 min</span>
-            </div>
-
-            <div style={styles.performanceItem}>
-              <span style={styles.performanceLabel}>User Rating</span>
-
-              <span style={styles.performanceValue}>⭐ 4.7 / 5</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* =========================================
-          RECENT ACTIVITY
-      ========================================= */}
-
-      <div
-        style={{
-          ...styles.card,
-          marginBottom: "20px",
-        }}
-      >
-        <div style={styles.cardHeader}>
-          <h2 style={styles.cardTitle}>Recent Activity</h2>
-
-          <button style={styles.viewAll} onClick={() => navigate("/history")}>
-            Activity History →
-          </button>
-        </div>
-
-        <div style={styles.activityBody}>
-          {recentActivities.map((activity, index) => (
-            <div key={index} style={styles.activityItem}>
-              <div style={styles.activityIcon}>{activity.icon}</div>
-
-              <div style={styles.activityInfo}>
-                <p style={styles.activityTitle}>{activity.title}</p>
-
-                <p style={styles.activityDescription}>{activity.description}</p>
+          {/* Performance */}
+          <article className="vd-panel">
+            <div className="vd-panel-heading">
+              <div className="vd-panel-title-icon vd-purple">
+                <ShieldCheck size={19} />
               </div>
-
-              <span style={styles.activityTime}>{activity.time}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* =========================================
-          BADGES + QUICK ACTIONS
-      ========================================= */}
-
-      <div style={styles.bottomGrid}>
-        {/* BADGES */}
-
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <h2 style={styles.cardTitle}>My Badges</h2>
-
-            <button style={styles.viewAll} onClick={() => navigate("/badges")}>
-              View All →
-            </button>
-          </div>
-
-          <div style={styles.badgeBody}>
-            {badges.map((badge, index) => (
-              <div key={index} style={styles.badge}>
-                <div style={styles.badgeIcon}>{badge.icon}</div>
-
-                <div style={styles.badgeName}>{badge.name}</div>
+              <div>
+                <h2>My performance</h2>
+                <p>Built from your recorded SOS history</p>
               </div>
-            ))}
+            </div>
+
+            {errors.performance ? (
+              <div className="vd-empty">
+                <p>Unable to load performance data.</p>
+                <button
+                  type="button"
+                  className="vd-text-link"
+                  onClick={() => navigate(routes.trust)}
+                >
+                  Open Trust Score <ArrowRight size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className="vd-performance-body">
+                <div className="vd-trust-summary">
+                  <div
+                    className="vd-trust-ring"
+                    style={{
+                      background: `conic-gradient(#198565 ${trustPct}%, #cfe8da 0)`,
+                    }}
+                  >
+                    <div className="vd-trust-ring-inner">
+                      <strong>{trustScore}</strong>
+                      <span>out of 100</span>
+                    </div>
+                  </div>
+                  <div className="vd-trust-copy">
+                    <span className="vd-mini-label">CURRENT TRUST LEVEL</span>
+                    <h3>{performance?.trustLevel || "Not available"}</h3>
+                    <p>
+                      Your score reflects your contribution and consistency.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="vd-performance-metrics">
+                  <div>
+                    <span>Accepted</span>
+                    <strong>{acceptedCount}</strong>
+                  </div>
+                  <div>
+                    <span>Resolved</span>
+                    <strong>{resolvedCount}</strong>
+                  </div>
+                  <div>
+                    <span>Success rate</span>
+                    <strong>
+                      {performance?.performance?.successRate == null
+                        ? "N/A"
+                        : `${performance.performance.successRate}%`}
+                    </strong>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="vd-outline-action"
+                  onClick={() => navigate(routes.trust)}
+                >
+                  Explore your Trust Score <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
+          </article>
+        </section>
+
+        {/* ---------- Bottom grid ---------- */}
+        <section className="vd-bottom-grid">
+          {/* Activity timeline */}
+          <article className="vd-panel">
+            <div className="vd-panel-heading">
+              <div className="vd-panel-title-icon vd-amber">
+                <Activity size={19} />
+              </div>
+              <div>
+                <h2>Recent activity</h2>
+                <p>Your 3 most recent updates</p>
+              </div>
+              <button
+                type="button"
+                className="vd-text-link"
+                onClick={() => navigate(routes.history)}
+              >
+                History <ArrowRight size={14} />
+              </button>
+            </div>
+
+            {errors.activities ? (
+              <div className="vd-empty">
+                <p>Unable to load recent activity.</p>
+              </div>
+            ) : recentActivities.length === 0 ? (
+              <div className="vd-empty vd-empty-compact">
+                <p>
+                  Your new achievements and profile updates will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="vd-timeline">
+                {recentActivities.map((activity, index) => (
+                  <div
+                    className="vd-activity-row"
+                    key={
+                      activity._id ||
+                      `${activity.type}-${activity.createdAt}-${index}`
+                    }
+                  >
+                    <span className="vd-activity-dot">
+                      {activity.type === "BADGE_EARNED" ? (
+                        <Award size={15} />
+                      ) : activity.type === "PROFILE_UPDATED" ? (
+                        <Users size={15} />
+                      ) : (
+                        <Activity size={15} />
+                      )}
+                    </span>
+                    <div className="vd-activity-copy">
+                      <div className="vd-activity-head">
+                        <strong>
+                          {activity.title || "Volunteer activity"}
+                        </strong>
+                        <span>{timeAgo(activity.createdAt)}</span>
+                      </div>
+                      <p>{activity.description || "Activity recorded."}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </article>
+
+          {/* Achievements */}
+          <article className="vd-panel">
+            <div className="vd-panel-heading">
+              <div className="vd-panel-title-icon vd-green">
+                <Award size={19} />
+              </div>
+              <div>
+                <h2>My achievements</h2>
+                <p>Milestones earned through your contribution</p>
+              </div>
+              <button
+                type="button"
+                className="vd-text-link"
+                onClick={() => navigate(routes.badges)}
+              >
+                All badges <ArrowRight size={14} />
+              </button>
+            </div>
+
+            {errors.badges ? (
+              <div className="vd-empty">
+                <p>Unable to load badge information.</p>
+              </div>
+            ) : (
+              <div className="vd-badges-body">
+                <div className="vd-badge-summary">
+                  <div className="vd-badge-emblem">
+                    <Award size={26} />
+                  </div>
+                  <div className="vd-badge-count">
+                    <strong>
+                      {earnedBadges.length} <em>of {badges.length}</em>
+                    </strong>
+                    <span>badges earned</span>
+                  </div>
+                  <span className="vd-badge-pct">
+                    {badges.length
+                      ? Math.round((earnedBadges.length / badges.length) * 100)
+                      : 0}
+                    %
+                  </span>
+                </div>
+
+                <div className="vd-progress-track">
+                  <div
+                    className="vd-progress-fill"
+                    style={{
+                      width: `${
+                        badges.length
+                          ? (earnedBadges.length / badges.length) * 100
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+
+                {earnedBadges.length || lockedBadges.length ? (
+                  <div className="vd-badge-grid">
+                    {earnedBadges.slice(0, 4).map((badge) => (
+                      <div className="vd-badge-tile earned" key={badge.key}>
+                        <span>
+                          <Award size={18} />
+                        </span>
+                        <strong>{badge.name}</strong>
+                      </div>
+                    ))}
+                    {lockedBadges
+                      .slice(0, Math.max(0, 4 - earnedBadges.length))
+                      .map((badge) => (
+                        <div className="vd-badge-tile locked" key={badge.key}>
+                          <span>
+                            <Award size={18} />
+                          </span>
+                          <strong>{badge.name}</strong>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="vd-empty vd-empty-compact">
+                    <p>Your first badge is waiting for your next milestone.</p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="vd-outline-action"
+                  onClick={() => navigate(routes.badges)}
+                >
+                  View achievements <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
+          </article>
+        </section>
+
+        {/* ---------- Shortcuts ---------- */}
+        <section className="vd-shortcuts">
+          <div className="vd-shortcuts-head">
+            <span className="vd-section-kicker">GET THINGS DONE</span>
+            <h2>Quick actions</h2>
           </div>
-        </div>
 
-        {/* QUICK ACTIONS */}
-
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <h2 style={styles.cardTitle}>Quick Actions</h2>
+          <div className="vd-shortcut-list">
+            {shortcuts.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  type="button"
+                  key={item.label}
+                  onClick={() => navigate(item.path)}
+                >
+                  <span className="vd-shortcut-icon">
+                    <Icon size={18} />
+                  </span>
+                  <span className="vd-shortcut-text">
+                    <strong>{item.label}</strong>
+                    <small>{item.hint}</small>
+                  </span>
+                  <ArrowRight size={15} className="vd-shortcut-arrow" />
+                </button>
+              );
+            })}
           </div>
+        </section>
 
-          <div style={styles.actionsBody}>
-            <button
-              style={styles.actionButton}
-              onClick={() => navigate("/sosrequests")}
-            >
-              <span style={styles.actionIcon}>🚨</span>
-              SOS Requests
-            </button>
-
-            <button
-              style={styles.actionButton}
-              onClick={() => navigate("/coordination")}
-            >
-              <span style={styles.actionIcon}>🤝</span>
-              Volunteer Coordination
-            </button>
-
-            <button
-              style={styles.actionButton}
-              onClick={() => navigate("/responses")}
-            >
-              <span style={styles.actionIcon}>📋</span>
-              My Responses
-            </button>
-
-            <button
-              style={styles.actionButton}
-              onClick={() => navigate("/trustscore")}
-            >
-              <span style={styles.actionIcon}>🛡️</span>
-              Trust Score
-            </button>
-          </div>
-        </div>
+        <footer className="vd-footer">
+          <HeartHandshake size={16} />
+          <span>SafeHer · Supporting a safer community, together.</span>
+        </footer>
       </div>
-    </div>
+    </main>
   );
 }
 
