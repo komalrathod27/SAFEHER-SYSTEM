@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "../volunteer-css/TrustScore.css";
+import { getVolunteerId } from "../utils/volunteerIdentity";
 
 function TrustScore() {
   const [data, setData] = useState(null);
@@ -7,8 +8,7 @@ function TrustScore() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("mydata") || "{}");
-    const volunteerId = user.user_id;
+    const volunteerId = getVolunteerId();
 
     if (!volunteerId) {
       setError("Volunteer ID not found. Please log in again.");

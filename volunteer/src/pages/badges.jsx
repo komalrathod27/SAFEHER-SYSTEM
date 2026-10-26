@@ -9,6 +9,7 @@ import {
   Zap,
 } from "lucide-react";
 import "../volunteer-css/badges.css";
+import { getVolunteerId } from "../utils/volunteerIdentity";
 
 function BadgeIcon({ type, size = 64 }) {
   const icons = {
@@ -103,8 +104,7 @@ function Badges() {
 
     async function fetchBadges() {
       try {
-        const user = JSON.parse(localStorage.getItem("mydata") || "{}");
-        const volunteerId = user.user_id;
+        const volunteerId = getVolunteerId();
 
         if (!volunteerId) {
           throw new Error(
