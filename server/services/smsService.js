@@ -116,10 +116,9 @@ class SMSService {
       };
     }
 
-    const devPhone = process.env.DEV_PHONE_NUMBER || quota.devPhone || "Dev Phone";
     const gatewayUrl = (process.env.DEV_PHONE_GATEWAY_URL || "").trim();
 
-    // 1. If Dev configured a local phone HTTP bridge/gateway
+    // A server cannot send through a phone SIM without a configured bridge.
     if (gatewayUrl) {
       try {
         const payload = JSON.stringify({
@@ -159,32 +158,27 @@ class SMSService {
         if (res.status >= 200 && res.status < 300) {
           this.incrementDevQuota(recipientNumbers.length);
           const updatedQuota = this.getDevQuota();
-          console.log(`📱 [Dev SIM SMS] Delivered via Dev Phone Gateway to ${recipientNumbers.join(", ")} (Quota remaining: ${updatedQuota.remaining}/${updatedQuota.dailyLimit})`);
+          console.log(`📱 [Dev SIM SMS] Accepted by Dev Phone Gateway (Quota remaining: ${updatedQuota.remaining}/${updatedQuota.dailyLimit})`);
           return { success: true, channel: "Dev Phone (SIM Gateway)", quotaRemaining: updatedQuota.remaining };
         }
+
+        return {
+          success: false,
+          reason: `Dev phone gateway returned HTTP ${res.status}.`,
+        };
       } catch (err) {
-        console.warn(`⚠️ Dev Phone Gateway at ${gatewayUrl} unreachable: ${err.message}. Trying local fallback...`);
+        console.warn(`⚠️ Dev Phone Gateway request failed: ${err.message}`);
+        return {
+          success: false,
+          reason: `Dev phone gateway request failed: ${err.message}`,
+        };
       }
     }
 
-    // 2. Local Dev Phone Engine (Native dispatch using Dev's 100 SMS pack)
-    this.incrementDevQuota(recipientNumbers.length);
-    const updatedQuota = this.getDevQuota();
-
-    console.log("\n==================================================================");
-    console.log("📱 [TIER 1: DEV'S PHONE SMS DISPATCH - 100 SMS/DAY PACK]");
-    console.log(`📞 FROM DEV NUMBER: ${devPhone || "Configured Dev Mobile"}`);
-    console.log(`🎯 TO NUMBERS:      ${recipientNumbers.join(", ")}`);
-    console.log(`📊 QUOTA REMAINING: ${updatedQuota.remaining} / ${updatedQuota.dailyLimit} SMS today`);
-    console.log("------------------------------------------------------------------");
-    console.log(messageText);
-    console.log("==================================================================\n");
-
     return {
-      success: true,
-      channel: "Dev Phone (100 SMS Pack)",
-      quotaRemaining: updatedQuota.remaining,
-      sentToday: updatedQuota.sentToday,
+      success: false,
+      reason:
+        "DEV_PHONE_GATEWAY_URL is not configured; this server cannot send SMS through a phone SIM without a phone gateway.",
     };
   }
 
@@ -335,14 +329,14 @@ class SMSService {
     // -------------------------------------------------------------
     // STEP 3: TIER 3 - BOTH EXHAUSTED!
     // -------------------------------------------------------------
-    const bothExhaustedMessage =
-      "🚨 ALERT: Bhai dono ka hi recharge nahi hai! Dev ka 100 SMS/day recharge bhi khatam ho gaya hai aur SMS Gateway ka bhi recharge nahi hai, isiliye SMS nahi ja paya! Kripya helpline 112 par direct call karein.";
+    const smsFailureMessage =
+      "SMS could not be delivered through the phone gateway or Fast2SMS. Please call emergency helpline 112 directly.";
 
     console.log("\n==================================================================");
-    console.log("❌❌❌ [TIER 3: DONO KA RECHARGE KHATAM HAI!] ❌❌❌");
-    console.log(bothExhaustedMessage);
-    console.log(`1. Dev Quota Status:    ${devQuota.sentToday}/${devQuota.dailyLimit} SMS sent (Exhausted)`);
-    console.log(`2. SMS Gateway Status:  ${gatewayRes.reason || "Recharge/Balance Exhausted"}`);
+    console.log("❌ [SMS DELIVERY FAILED]");
+    console.log(smsFailureMessage);
+    console.log(`1. Dev Phone Gateway: ${devReason}`);
+    console.log(`2. Fast2SMS: ${gatewayRes.reason || "Provider did not accept the request."}`);
     console.log(`🎯 Targeted Recipients: ${recipientList.join(", ")}`);
     console.log("==================================================================\n");
 
@@ -350,7 +344,7 @@ class SMSService {
       success: false,
       devExhausted: true,
       gatewayExhausted: true,
-      message: bothExhaustedMessage,
+      message: smsFailureMessage,
       devStatus: devReason,
       gatewayStatus: gatewayRes.reason,
     };

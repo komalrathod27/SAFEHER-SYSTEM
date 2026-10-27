@@ -1,15 +1,5 @@
-/**
- * Google Mail Service for SafeHer Emergency System
- * 
- * Uses Google's official free SMTP service (smtp.gmail.com:465)
- * using Node.js native TLS socket - ZERO third-party libraries (no nodemailer required).
- * 
- * Configuration in server/.env:
- *   GMAIL_USER=your_email@gmail.com
- *   GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx  (Google 16-character App Password)
- */
-
 const tls = require("tls");
+const fs = require("fs");
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../.env") });
 
@@ -36,13 +26,15 @@ class GoogleMailService {
   /**
    * Sends raw email via Google TLS SMTP
    */
-  async sendMail({ to, subject, html, text }) {
+  async sendMail({ to, subject, html, text, inlineAttachments = [] }) {
     const recipients = (Array.isArray(to) ? to : [to])
       .map((e) => (typeof e === "string" ? e.trim() : ""))
       .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
 
     if (recipients.length === 0) {
-      console.warn("⚠️ [SafeHer Mail] No valid recipient email addresses provided.");
+      console.warn(
+        "⚠️ [SafeHer Mail] No valid recipient email addresses provided.",
+      );
       return { success: false, reason: "No valid recipient email addresses." };
     }
 
@@ -51,25 +43,38 @@ class GoogleMailService {
 
     // If Google credentials are not yet added to .env, log a clear preview
     if (!this.isConfigured()) {
-      console.log("\n==================================================================");
+      console.log(
+        "\n==================================================================",
+      );
       console.log("🚨 [SAFEHER GOOGLE MAIL SERVICE - PREVIEW MODE]");
       console.log(`✉️  RECIPIENTS: ${recipients.join(", ")}`);
       console.log(`📌 SUBJECT:    ${subject}`);
-      console.log("------------------------------------------------------------------");
+      console.log(
+        "------------------------------------------------------------------",
+      );
       console.log(text || "Emergency SOS Details Dispatched");
-      console.log("------------------------------------------------------------------");
+      console.log(
+        "------------------------------------------------------------------",
+      );
       console.log("ℹ️  HOW TO SEND REAL EMAILS VIA GMAIL FOR FREE:");
-      console.log("1. Open Google Account -> Security -> 2-Step Verification (turn ON).");
-      console.log("2. Under 2-Step Verification -> App Passwords -> Create new app 'SafeHer'.");
+      console.log(
+        "1. Open Google Account -> Security -> 2-Step Verification (turn ON).",
+      );
+      console.log(
+        "2. Under 2-Step Verification -> App Passwords -> Create new app 'SafeHer'.",
+      );
       console.log("3. Copy the 16-letter password and add to server/.env:");
       console.log("   GMAIL_USER=yourgmail@gmail.com");
       console.log("   GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx");
-      console.log("==================================================================\n");
+      console.log(
+        "==================================================================\n",
+      );
 
       return {
         success: true,
         preview: true,
-        message: "Email preview logged in server terminal (no Gmail credentials in .env).",
+        message:
+          "Email preview logged in server terminal (no Gmail credentials in .env).",
       };
     }
 
@@ -87,7 +92,7 @@ class GoogleMailService {
         },
         () => {
           // Connected
-        }
+        },
       );
 
       const cleanup = () => {
@@ -121,7 +126,9 @@ class GoogleMailService {
       const handleReply = (code, fullMsg) => {
         if (code >= 400) {
           console.error(`❌ [Google SMTP Error] ${code}: ${fullMsg}`);
-          return finishReject(new Error(`Google SMTP Error ${code}: ${fullMsg}`));
+          return finishReject(
+            new Error(`Google SMTP Error ${code}: ${fullMsg}`),
+          );
         }
 
         switch (state) {
@@ -184,7 +191,9 @@ class GoogleMailService {
               state = "CONTENT";
               const messageDate = new Date().toUTCString();
               const boundary = `safeher_boundary_${Date.now()}`;
-
+              const alternativeBoundary = `${boundary}_alternative`;
+              const relatedBoundary = `${boundary}_related`;
+              const hasInlineAttachments = inlineAttachments.length > 0;
               const headers = [
                 `From: "SafeHer Women Safety" <${fromUser}>`,
                 `To: ${recipients.join(", ")}`,
@@ -193,21 +202,46 @@ class GoogleMailService {
                 `MIME-Version: 1.0`,
                 `Importance: high`,
                 `X-Priority: 1`,
-                `Content-Type: multipart/alternative; boundary="${boundary}"`,
+                hasInlineAttachments
+                  ? `Content-Type: multipart/related; boundary="${relatedBoundary}"`
+                  : `Content-Type: multipart/alternative; boundary="${boundary}"`,
                 "",
-                `--${boundary}`,
+                ...(hasInlineAttachments
+                  ? [
+                      `--${relatedBoundary}`,
+                      `Content-Type: multipart/alternative; boundary="${alternativeBoundary}"`,
+                      "",
+                    ]
+                  : []),
+                `--${hasInlineAttachments ? alternativeBoundary : boundary}`,
                 `Content-Type: text/plain; charset=UTF-8`,
                 `Content-Transfer-Encoding: 8bit`,
                 "",
                 text || "Emergency SOS Alert",
                 "",
-                `--${boundary}`,
+                `--${hasInlineAttachments ? alternativeBoundary : boundary}`,
                 `Content-Type: text/html; charset=UTF-8`,
                 `Content-Transfer-Encoding: 8bit`,
                 "",
                 html || `<p>${text || "Emergency SOS Alert"}</p>`,
                 "",
-                `--${boundary}--`,
+                `--${hasInlineAttachments ? alternativeBoundary : boundary}--`,
+                ...(hasInlineAttachments
+                  ? inlineAttachments.flatMap((attachment) => [
+                      "",
+                      `--${relatedBoundary}`,
+                      `Content-Type: ${attachment.contentType}; name="${attachment.filename}"`,
+                      "Content-Transfer-Encoding: base64",
+                      `Content-ID: <${attachment.contentId}>`,
+                      `Content-Disposition: inline; filename="${attachment.filename}"`,
+                      "",
+                      attachment.content
+                        .toString("base64")
+                        .match(/.{1,76}/g)
+                        .join("\r\n"),
+                    ])
+                  : []),
+                ...(hasInlineAttachments ? [`--${relatedBoundary}--`] : []),
                 ".",
               ].join("\r\n");
 
@@ -223,8 +257,13 @@ class GoogleMailService {
             break;
 
           case "QUIT":
-            console.log(`✅ [SafeHer Mail] Email sent successfully via Google to: ${recipients.join(", ")}`);
-            finishResolve({ success: true, message: "Email delivered via Google Gmail SMTP." });
+            console.log(
+              `✅ [SafeHer Mail] Email sent successfully via Google to: ${recipients.join(", ")}`,
+            );
+            finishResolve({
+              success: true,
+              message: "Email delivered via Google Gmail SMTP.",
+            });
             break;
         }
       };
@@ -272,10 +311,13 @@ class GoogleMailService {
     womanLng,
     emergencyType,
   }) {
-    if (!recipients || recipients.length === 0) return { success: false, reason: "No recipients" };
+    if (!recipients || recipients.length === 0)
+      return { success: false, reason: "No recipients" };
 
     const mapsUrl = `https://www.google.com/maps?q=${womanLat},${womanLng}`;
-    const timestamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    const timestamp = new Date().toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+    });
     const name = womanName || "A Woman in Need";
 
     const subject = `🚨 URGENT: Emergency SOS Alert Activated by ${name}!`;
@@ -410,27 +452,68 @@ Please contact ${name} immediately or dial 112.
     volunteerEmail,
     distance,
   }) {
-    if (!recipients || recipients.length === 0) return { success: false, reason: "No recipients" };
+    if (!recipients || recipients.length === 0)
+      return { success: false, reason: "No recipients" };
 
     const mapsUrl = `https://www.google.com/maps?q=${womanLat},${womanLng}`;
-    const timestamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    const timestamp = new Date().toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+    });
     const wName = womanName || "Woman User";
     const vName = volunteerName || "Verified Volunteer";
 
     const subject = `🛡️ VOLUNTEER ASSIGNED: Help is on the way for ${wName}!`;
 
-    // Process photo URL: if volunteer uploaded a photo (relative path) vs full URL vs fallback avatar
+    // Embed locally stored photos so recipients do not need access to this server.
     let photoHtml = "";
-    if (volunteerPhoto) {
-      const photoSrc = volunteerPhoto.startsWith("http")
-        ? volunteerPhoto
-        : `http://localhost:3000/volunteer/${volunteerPhoto}`;
-      photoHtml = `
-        <div style="text-align: center; margin-bottom: 18px;">
-          <img src="${photoSrc}" alt="${vName}" style="width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 4px solid #2563eb; box-shadow: 0 4px 14px rgba(37,99,235,0.3);" onerror="this.style.display='none'" />
-        </div>
-      `;
-    } else {
+    const inlineAttachments = [];
+    if (typeof volunteerPhoto === "string" && volunteerPhoto.trim()) {
+      let photoSrc = "";
+      if (/^https?:\/\//i.test(volunteerPhoto)) {
+        photoSrc = volunteerPhoto;
+      } else {
+        const filename = path.basename(volunteerPhoto);
+        const extension = path.extname(filename).toLowerCase();
+        const contentType =
+          extension === ".png"
+            ? "image/png"
+            : [".jpg", ".jpeg"].includes(extension)
+              ? "image/jpeg"
+              : null;
+        const photoPath = path.join(__dirname, "../volunteer", filename);
+
+        if (contentType && fs.existsSync(photoPath)) {
+          try {
+            const contentId = `volunteer-photo-${Date.now()}@safeher`;
+            inlineAttachments.push({
+              content: fs.readFileSync(photoPath),
+              contentId,
+              contentType,
+              filename,
+            });
+            photoSrc = `cid:${contentId}`;
+          } catch (error) {
+            console.error(
+              "Unable to read volunteer profile photo for email:",
+              error,
+            );
+          }
+        } else {
+          console.warn(
+            `Volunteer profile photo is unavailable for email attachment: ${filename}`,
+          );
+        }
+      }
+
+      if (photoSrc) {
+        photoHtml = `
+          <div style="text-align: center; margin-bottom: 18px;">
+            <img src="${photoSrc}" alt="${vName}" width="110" height="110" style="width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 4px solid #2563eb; box-shadow: 0 4px 14px rgba(37,99,235,0.3);" />
+          </div>
+        `;
+      }
+    }
+    if (!photoHtml) {
       photoHtml = `
         <div style="text-align: center; margin-bottom: 18px;">
           <div style="display: inline-flex; align-items: center; justify-content: center; width: 90px; height: 90px; border-radius: 50%; background: #dbeafe; color: #1d4ed8; font-size: 38px; font-weight: 800; border: 3px solid #3b82f6;">
@@ -552,6 +635,87 @@ Google Maps Link: ${mapsUrl}
 
 Please contact the volunteer or user if needed.
     `;
+
+    return this.sendMail({
+      to: recipients,
+      subject,
+      html,
+      text,
+      inlineAttachments,
+    });
+  }
+
+  /**
+   * Helper 3: SOS Resolved Update Email to Trusted Contacts
+   */
+  async sendSOSResolvedEmail({
+    recipients,
+    womanName,
+    womanPhone,
+    womanAddress,
+    womanLat,
+    womanLng,
+    emergencyType,
+    resolvedBy,
+    volunteerName,
+  }) {
+    if (!recipients || recipients.length === 0) {
+      return { success: false, reason: "No recipients" };
+    }
+
+    const escapeHtml = (value) =>
+      String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    const name = escapeHtml(womanName || "Woman User");
+    const phone = escapeHtml(womanPhone || "Not provided");
+    const address = escapeHtml(womanAddress || "Location unavailable");
+    const type = escapeHtml(emergencyType || "Emergency Assistance");
+    const resolver = escapeHtml(resolvedBy || "SafeHer user");
+    const responder = escapeHtml(volunteerName || "");
+    const timestamp = new Date().toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+    });
+    const mapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(
+      `${womanLat},${womanLng}`,
+    )}`;
+    const subject = `✅ SOS Resolved: ${womanName || "Woman User"} is safe`;
+    const volunteerDetails = responder
+      ? `<p><strong>Responding volunteer:</strong> ${responder}</p>`
+      : "";
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,sans-serif;color:#1e293b;">
+        <main style="max-width:600px;margin:0 auto;background:#fff;border:1px solid #bbf7d0;border-radius:12px;overflow:hidden;">
+          <header style="padding:24px;background:#15803d;color:#fff;text-align:center;">
+            <h1 style="margin:0 0 8px;font-size:24px;">SOS Resolved</h1>
+            <p style="margin:0;">The emergency alert has been closed.</p>
+          </header>
+          <section style="padding:24px;">
+            <p>This is an update for the trusted contact of <strong>${name}</strong>. The SOS has been marked resolved by <strong>${resolver}</strong>.</p>
+            ${volunteerDetails}
+            <p><strong>Emergency:</strong> ${type}</p>
+            <p><strong>Phone:</strong> ${phone}</p>
+            <p><strong>Location:</strong> ${address}</p>
+            <p><strong>Resolved at:</strong> ${escapeHtml(timestamp)} IST</p>
+            <p style="text-align:center;margin:28px 0;">
+              <a href="${mapsUrl}" style="display:inline-block;padding:12px 20px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none;font-weight:bold;">View location</a>
+            </p>
+          </section>
+          <footer style="padding:16px;text-align:center;background:#f8fafc;color:#64748b;font-size:12px;">
+            SafeHer Women Safety System
+          </footer>
+        </main>
+      </body>
+      </html>
+    `;
+    const text = `SOS RESOLVED\n\n${womanName || "Woman User"}'s emergency alert has been marked resolved by ${resolvedBy || "a SafeHer user"}.\n${volunteerName ? `Responding volunteer: ${volunteerName}\n` : ""}Emergency: ${emergencyType || "Emergency Assistance"}\nPhone: ${womanPhone || "Not provided"}\nLocation: ${womanAddress || "Location unavailable"}\nResolved at: ${timestamp} IST\nMap: ${mapsUrl}`;
 
     return this.sendMail({
       to: recipients,
