@@ -1,6 +1,7 @@
 {
-  "date": "2026-10-26",
+  "date": "2026-10-27",
   "dailyLimit": 100,
   "sentToday": 0,
-  "devPhone": ""
+  "devPhone": "",
+  "remaining": 90
 }

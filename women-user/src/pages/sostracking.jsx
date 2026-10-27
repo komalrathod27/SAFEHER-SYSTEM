@@ -2161,23 +2161,11 @@ function SOSTracking() {
           setActiveSos(res.data.sos);
           localStorage.setItem("activeSosId", res.data.sos._id);
 
-          if (smsStatus && !smsStatus.success && smsStatus.devExhausted && smsStatus.gatewayExhausted) {
+          if (smsStatus && !smsStatus.success) {
             Swal.fire({
               icon: "warning",
-              title: "⚠️ SMS Delivery Warning!",
-              html: `
-                <div style="text-align: left; font-size: 14px; line-height: 1.6;">
-                  <p style="color: #dc2626; font-weight: 800; font-size: 16px; margin-bottom: 8px;">
-                    🚨 Bhai dono ka hi recharge nahi hai!
-                  </p>
-                  <p style="margin-bottom: 8px; color: #334155;">
-                    Dev ke number ka 100 SMS/day recharge pack bhi khatam ho gaya hai aur SMS Gateway ka bhi recharge nahi hai, isiliye SMS nahi ja paya!
-                  </p>
-                  <p style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 10px; border-radius: 6px; color: #991b1b; font-weight: 600; margin: 0;">
-                    Email alert bhej diya gaya hai. Kripya turant Emergency Helpline 112 par direct call karein!
-                  </p>
-                </div>
-              `,
+              title: "SMS not delivered",
+              text: `${smsStatus.message} Call emergency helpline 112 directly if you need immediate help.`,
               confirmButtonColor: "#dc2626",
             });
           } else {

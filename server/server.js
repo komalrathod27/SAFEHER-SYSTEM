@@ -2332,9 +2332,18 @@ app.post("/api/sos/create", async (req, res) => {
           womanPhone: newAlert.womanPhone,
           emergencyType: newAlert.emergencyType,
         });
+      } else {
+        smsStatus = {
+          success: false,
+          message: "No valid trusted-contact phone numbers are configured.",
+        };
       }
     } catch (smsErr) {
       console.error("Error sending SOS SMS to trusted contacts:", smsErr);
+      smsStatus = {
+        success: false,
+        message: "SMS delivery failed due to a server error. Please call 112 directly if you need immediate help.",
+      };
     }
 
     return res.status(201).json({
@@ -2559,9 +2568,18 @@ app.put("/api/sos/approve/:id", async (req, res) => {
           volunteerEmail: sos.volunteerEmail,
           distance: sos.distance,
         });
+      } else {
+        smsStatus = {
+          success: false,
+          message: "No valid trusted-contact phone numbers are configured.",
+        };
       }
     } catch (smsErr) {
       console.error("Error sending volunteer assigned SMS:", smsErr);
+      smsStatus = {
+        success: false,
+        message: "SMS delivery failed due to a server error.",
+      };
     }
 
     return res.status(200).json({
@@ -2785,6 +2803,55 @@ app.put("/api/sos/resolve/:id", async (req, res) => {
       io.to(`sos_${id}`).emit("sos_resolved", sos);
       io.to(`sos_${id}`).emit("sos_status_changed", sos);
       io.to("volunteers_channel").emit("sos_updated", sos);
+    }
+
+    try {
+      const contacts = await trustedContact.find({ womanId: sos.womanId });
+      const recipientEmails = contacts
+        .map((contact) => (contact.email || "").trim())
+        .filter((email) => email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+
+      if (recipientEmails.length > 0) {
+        googleMailService
+          .sendSOSResolvedEmail({
+            recipients: recipientEmails,
+            womanName: sos.womanName,
+            womanPhone: sos.womanPhone,
+            womanAddress: sos.womanAddress,
+            womanLat: sos.womanLat,
+            womanLng: sos.womanLng,
+            emergencyType: sos.emergencyType,
+            resolvedBy: isAssignedVolunteer ? "the responding volunteer" : "the woman user",
+            volunteerName: sos.volunteerName,
+          })
+          .then((mailRes) => {
+            if (mailRes?.preview) {
+              console.log(
+                `ℹ️ SOS resolved email preview logged for trusted contacts of ${sos.womanName}`,
+              );
+            } else if (mailRes?.success) {
+              console.log(
+                `✅ SOS resolved email sent to ${recipientEmails.length} trusted contact(s) of ${sos.womanName}`,
+              );
+            } else {
+              console.warn(
+                `⚠️ SOS resolved email was not sent for ${sos.womanName}: ${mailRes?.reason || "Unknown mail service response."}`,
+              );
+            }
+          })
+          .catch((mailError) => {
+            console.error(
+              "❌ Failed to send SOS resolved email to trusted contacts:",
+              mailError.message,
+            );
+          });
+      } else {
+        console.warn(
+          `⚠️ No valid trusted-contact email addresses are configured for ${sos.womanName}.`,
+        );
+      }
+    } catch (mailError) {
+      console.error("Error looking up trusted contacts for SOS resolved email:", mailError);
     }
 
     res.status(200).json({
