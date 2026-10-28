@@ -1,553 +1,344 @@
-import React, { useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Axios from "axios";
 
-const sosHistory = [
-  {
-    id: "SOS-1018",
-    womanName: "Priya Shah",
-    phone: "9876543210",
-    location: "Vadodara City",
-    volunteer: "Rahul Patel",
-    volunteerId: "V001",
-    emergencyType: "Immediate Safety Assistance",
-    startedTime: "11 Sep 2026, 08:20 PM",
-    acceptedTime: "08:24 PM",
-    respondingTime: "08:25 PM",
-    locationSharedTime: "08:29 PM",
-    completedTime: "08:38 PM",
-    responseTime: "4 min",
-    outcome:
-      "The volunteer responded to the SOS request and successfully assisted the woman.",
-    feedback: "Volunteer responded quickly and helped me reach a safe place.",
-    rating: 5,
-    status: "Completed",
-  },
+const API_BASE = "http://localhost:3000";
 
-  {
-    id: "SOS-1019",
-    womanName: "Neha Patel",
-    phone: "9876543211",
-    location: "Ahmedabad City",
-    volunteer: "Amit Shah",
-    volunteerId: "V002",
-    emergencyType: "Emergency Assistance",
-    startedTime: "10 Sep 2026, 06:15 PM",
-    acceptedTime: "06:18 PM",
-    respondingTime: "06:19 PM",
-    locationSharedTime: "06:21 PM",
-    completedTime: "06:30 PM",
-    responseTime: "3 min",
-    outcome:
-      "The volunteer reached the user and provided the required emergency assistance.",
-    feedback:
-      "The volunteer was helpful and stayed connected until I was safe.",
-    rating: 4,
-    status: "Completed",
-  },
+function formatDate(value) {
+  if (!value) return "Not recorded";
 
-  {
-    id: "SOS-1020",
-    womanName: "Riya Mehta",
-    phone: "9876543212",
-    location: "Surat City",
-    volunteer: "Vishal Desai",
-    volunteerId: "V004",
-    emergencyType: "Immediate Safety Assistance",
-    startedTime: "09 Sep 2026, 09:10 PM",
-    acceptedTime: "09:13 PM",
-    respondingTime: "09:14 PM",
-    locationSharedTime: "09:17 PM",
-    completedTime: "09:27 PM",
-    responseTime: "3 min",
-    outcome:
-      "The volunteer assisted the woman and completed the SOS case successfully.",
-    feedback: "",
-    rating: 0,
-    status: "Completed",
-  },
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not recorded";
 
-  {
-    id: "SOS-1017",
-    womanName: "Sneha Patel",
-    phone: "9876543213",
-    location: "Vadodara East",
-    volunteer: "Rahul Patel",
-    volunteerId: "V001",
-    emergencyType: "Emergency Assistance",
-    startedTime: "08 Sep 2026, 07:40 PM",
-    acceptedTime: "07:44 PM",
-    respondingTime: "07:45 PM",
-    locationSharedTime: "07:48 PM",
-    completedTime: "08:02 PM",
-    responseTime: "4 min",
-    outcome:
-      "Emergency assistance was completed after the volunteer remained connected with the user.",
-    feedback: "Thank you for responding and helping during the emergency.",
-    rating: 5,
-    status: "Completed",
-  },
-];
-
-function getStars(rating) {
-  if (!rating) {
-    return `<span class="text-muted">No rating</span>`;
-  }
-
-  return `
-    <span class="text-warning">
-      ${"★".repeat(rating)}
-    </span>
-    <span class="text-muted ml-1">(${rating}/5)</span>
-  `;
-}
-
-function displaySOSHistory(data) {
-  const container = document.getElementById("sosHistoryContainer");
-
-  if (!container) return;
-
-  if (data.length === 0) {
-    container.innerHTML = `
-      <div class="col-12">
-        <div class="card">
-          <div class="card-body text-center py-5">
-            <i class="mdi mdi-history mdi-36px text-muted"></i>
-
-            <h5 class="mt-3">
-              No SOS Cases Found
-            </h5>
-
-            <p class="text-muted mb-0">
-              No completed SOS cases match your search.
-            </p>
-          </div>
-        </div>
-      </div>
-    `;
-
-    return;
-  }
-
-  container.innerHTML = data
-    .map(
-      (item) => `
-        <div class="col-md-6 mb-4">
-
-          <div class="card h-100">
-
-            <div class="card-body">
-
-              <div class="d-flex justify-content-between align-items-start mb-3">
-
-                <div>
-                  <h5 class="mb-1">
-                    ${item.id}
-                  </h5>
-
-                  <small class="text-muted">
-                    ${item.emergencyType}
-                  </small>
-                </div>
-
-                <span class="badge badge-success">
-                  ${item.status}
-                </span>
-
-              </div>
-
-
-              <div class="row mb-3">
-
-                <div class="col-6 mb-3">
-
-                  <small class="text-muted d-block">
-                    Woman User
-                  </small>
-
-                  <strong>
-                    ${item.womanName}
-                  </strong>
-
-                </div>
-
-
-                <div class="col-6 mb-3">
-
-                  <small class="text-muted d-block">
-                    Location
-                  </small>
-
-                  <strong>
-                    ${item.location}
-                  </strong>
-
-                </div>
-
-
-                <div class="col-6">
-
-                  <small class="text-muted d-block">
-                    Response Time
-                  </small>
-
-                  <strong>
-                    ${item.responseTime}
-                  </strong>
-
-                </div>
-
-
-                <div class="col-6">
-
-                  <small class="text-muted d-block">
-                    Volunteer
-                  </small>
-
-                  <strong>
-                    ${item.volunteer}
-                  </strong>
-
-                </div>
-
-              </div>
-
-
-              <hr />
-
-              <button
-                class="btn btn-sm btn-outline-primary"
-                onclick="viewSOSHistory('${item.id}')"
-              >
-                View Case
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-      `,
-    )
-    .join("");
-}
-
-function searchSOSHistory() {
-  const input = document.getElementById("sosHistorySearch");
-
-  if (!input) return;
-
-  const searchValue = input.value.toLowerCase().trim();
-
-  const filteredData = sosHistory.filter((item) => {
-    return (
-      item.id.toLowerCase().includes(searchValue) ||
-      item.womanName.toLowerCase().includes(searchValue) ||
-      item.location.toLowerCase().includes(searchValue) ||
-      item.volunteer.toLowerCase().includes(searchValue) ||
-      item.emergencyType.toLowerCase().includes(searchValue)
-    );
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
-
-  displaySOSHistory(filteredData);
 }
 
-function viewSOSHistory(id) {
-  const item = sosHistory.find((caseItem) => caseItem.id === id);
-
-  if (!item) return;
-
-  document.getElementById("historySOSId").innerText = item.id;
-
-  document.getElementById("historyWomanName").innerText = item.womanName;
-
-  document.getElementById("historyWomanPhone").innerText = item.phone;
-
-  document.getElementById("historyLocation").innerText = item.location;
-
-  document.getElementById("historyEmergencyType").innerText =
-    item.emergencyType;
-
-  document.getElementById("historyVolunteer").innerText = item.volunteer;
-
-  document.getElementById("historyVolunteerId").innerText = item.volunteerId;
-
-  document.getElementById("historyStarted").innerText = item.startedTime;
-
-  document.getElementById("historyAccepted").innerText = item.acceptedTime;
-
-  document.getElementById("historyResponding").innerText = item.respondingTime;
-
-  document.getElementById("historyLocationShared").innerText =
-    item.locationSharedTime;
-
-  document.getElementById("historyCompleted").innerText = item.completedTime;
-
-  document.getElementById("historyResponseTime").innerText = item.responseTime;
-
-  document.getElementById("historyOutcome").innerText = item.outcome;
-
-  document.getElementById("historyFeedback").innerText =
-    item.feedback || "No feedback submitted.";
-
-  document.getElementById("historyRating").innerHTML = getStars(item.rating);
-
-  document.getElementById("sosHistoryModal").style.display = "block";
+function getStatusClass(status) {
+  return status === "Resolved" ? "badge-success" : "badge-secondary";
 }
 
-function closeSOSHistoryModal() {
-  const modal = document.getElementById("sosHistoryModal");
-
-  if (modal) {
-    modal.style.display = "none";
-  }
+function getAdminRequestConfig() {
+  const session = JSON.parse(sessionStorage.getItem("mydata") || "null");
+  return {
+    headers: session?.token
+      ? { Authorization: `Bearer ${session.token}` }
+      : {},
+  };
 }
 
-function AdminSOSHistory() {
-  useEffect(() => {
-    displaySOSHistory(sosHistory);
-
-    window.viewSOSHistory = viewSOSHistory;
-    window.closeSOSHistoryModal = closeSOSHistoryModal;
-
-    return () => {
-      delete window.viewSOSHistory;
-      delete window.closeSOSHistoryModal;
-    };
-  }, []);
-
+function HistoryField({ label, value }) {
   return (
-    <div className="content-wrapper">
-      {/* Page Header */}
-
-      <div className="row">
-        <div className="col-12 grid-margin">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <h4 className="card-title mb-1">SOS History</h4>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search */}
-
-      <div className="row">
-        <div className="col-12 grid-margin">
-          <div className="card">
-            <div className="card-body">
-              <div className="form-group mb-0">
-                <label>Search Cases</label>
-
-                <input
-                  type="text"
-                  id="sosHistorySearch"
-                  className="form-control"
-                  placeholder="Search by SOS ID, woman, volunteer, location..."
-                  onKeyUp={searchSOSHistory}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* History Cards */}
-
-      <div className="row" id="sosHistoryContainer"></div>
-
-      {/* View Case Modal */}
-
-      <div
-        id="sosHistoryModal"
-        style={{
-          display: "none",
-          position: "fixed",
-          zIndex: 1050,
-          left: 0,
-          top: 0,
-          width: "100%",
-          height: "100%",
-          overflow: "auto",
-          backgroundColor: "rgba(0,0,0,0.5)",
-        }}
-      >
-        <div
-          className="modal-dialog modal-lg"
-          style={{
-            margin: "60px auto",
-            maxWidth: "850px",
-          }}
-        >
-          <div className="modal-content">
-            {/* Modal Header */}
-
-            <div className="modal-header">
-              <div>
-                <h5 className="modal-title mb-1">SOS Case Details</h5>
-
-                <small className="text-muted" id="historySOSId"></small>
-              </div>
-
-              <button
-                type="button"
-                onClick={closeSOSHistoryModal}
-                style={{
-                  border: "none",
-                  background: "#e92e2e",
-                  color: "#ffffff",
-                  width: "33px",
-                  height: "33px",
-                  borderRadius: "10%",
-                  fontSize: "30px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <span>&times;</span>
-              </button>
-            </div>
-
-            <div className="modal-body">
-              {/* Case Information */}
-
-              <h5 className="mb-3">Case Information</h5>
-
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <small className="text-muted d-block">Woman User</small>
-
-                  <strong id="historyWomanName"></strong>
-                </div>
-
-                <div className="col-md-6 mb-3">
-                  <small className="text-muted d-block">Phone Number</small>
-
-                  <strong id="historyWomanPhone"></strong>
-                </div>
-
-                <div className="col-md-6 mb-3">
-                  <small className="text-muted d-block">Location</small>
-
-                  <strong id="historyLocation"></strong>
-                </div>
-
-                <div className="col-md-6 mb-3">
-                  <small className="text-muted d-block">Emergency Type</small>
-
-                  <strong id="historyEmergencyType"></strong>
-                </div>
-              </div>
-
-              <hr />
-
-              {/* Volunteer Response */}
-
-              <h5 className="mb-3">Volunteer Response</h5>
-
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <small className="text-muted d-block">Volunteer</small>
-
-                  <strong id="historyVolunteer"></strong>
-                </div>
-
-                <div className="col-md-6 mb-3">
-                  <small className="text-muted d-block">Volunteer ID</small>
-
-                  <strong id="historyVolunteerId"></strong>
-                </div>
-
-                <div className="col-md-6 mb-3">
-                  <small className="text-muted d-block">Response Time</small>
-
-                  <strong id="historyResponseTime"></strong>
-                </div>
-              </div>
-
-              <hr />
-
-              {/* Emergency Timeline */}
-
-              <h5 className="mb-3">Emergency Timeline</h5>
-
-              <div className="border rounded p-3">
-                <div className="d-flex justify-content-between align-items-center py-2">
-                  <div>
-                    <span className="text-success mr-2">✓</span>
-
-                    <strong>SOS Triggered</strong>
-                  </div>
-
-                  <small className="text-muted" id="historyStarted"></small>
-                </div>
-
-                <div className="d-flex justify-content-between align-items-center py-2">
-                  <div>
-                    <span className="text-success mr-2">✓</span>
-                    Volunteer Accepted
-                  </div>
-
-                  <small className="text-muted" id="historyAccepted"></small>
-                </div>
-
-                <div className="d-flex justify-content-between align-items-center py-2">
-                  <div>
-                    <span className="text-success mr-2">✓</span>
-                    Volunteer Responding
-                  </div>
-
-                  <small className="text-muted" id="historyResponding"></small>
-                </div>
-
-                <div className="d-flex justify-content-between align-items-center py-2">
-                  <div>
-                    <span className="text-success mr-2">✓</span>
-                    Live Location Shared
-                  </div>
-
-                  <small
-                    className="text-muted"
-                    id="historyLocationShared"
-                  ></small>
-                </div>
-
-                <div className="d-flex justify-content-between align-items-center py-2">
-                  <div>
-                    <span className="text-success mr-2">✓</span>
-
-                    <strong>Assistance Completed</strong>
-                  </div>
-
-                  <small className="text-muted" id="historyCompleted"></small>
-                </div>
-              </div>
-
-              <hr />
-
-              {/* Case Outcome */}
-
-              <h5 className="mb-3">Case Outcome</h5>
-
-              <div className="p-3 border rounded mb-4">
-                <p className="mb-0" id="historyOutcome"></p>
-              </div>
-
-              {/* Feedback */}
-
-              <h5 className="mb-3">Woman Feedback</h5>
-
-              <div className="p-3 border rounded">
-                <p className="mb-2" id="historyFeedback"></p>
-
-                <div id="historyRating"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="col-md-6 mb-3">
+      <small className="text-muted d-block">{label}</small>
+      <strong>{value || "Not recorded"}</strong>
     </div>
   );
 }
 
-export default AdminSOSHistory;
+export default function AdminSOSHistory() {
+  const [requests, setRequests] = useState([]);
+  const [search, setSearch] = useState("");
+  const [selectedSOS, setSelectedSOS] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshError, setRefreshError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  const fetchHistory = useCallback(async () => {
+    try {
+      const response = await Axios.get(
+        `${API_BASE}/api/admin/sos/all`,
+        getAdminRequestConfig(),
+      );
+      const allRequests = Array.isArray(response.data?.requests)
+        ? response.data.requests
+        : [];
+
+      setRequests(allRequests.filter((sos) => sos.status === "Resolved"));
+      setLastUpdated(new Date());
+      setRefreshError("");
+    } catch (error) {
+      console.error("Admin SOS history fetch error:", error);
+      setRefreshError(
+        error.response?.data?.message ||
+          "Unable to load SOS history. Check the server connection.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const initialRefreshTimer = window.setTimeout(fetchHistory, 0);
+    const refreshTimer = window.setInterval(fetchHistory, 5000);
+
+    return () => {
+      window.clearTimeout(initialRefreshTimer);
+      window.clearInterval(refreshTimer);
+    };
+  }, [fetchHistory]);
+
+  useEffect(() => {
+    if (!selectedSOS) return undefined;
+
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setSelectedSOS(null);
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [selectedSOS]);
+
+  const filteredRequests = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return requests.filter((sos) => {
+      const searchableValues = [
+        sos._id,
+        sos.womanName,
+        sos.womanPhone,
+        sos.womanAddress,
+        sos.emergencyType,
+        sos.volunteerName,
+      ];
+      const matchesSearch = searchableValues.some((value) =>
+        String(value || "")
+          .toLowerCase()
+          .includes(normalizedSearch),
+      );
+
+      return matchesSearch;
+    });
+  }, [requests, search]);
+
+  return (
+    <div className="content-wrapper">
+      <div className="page-header">
+        <div>
+          <h3 className="page-title">SOS History</h3>
+          <p className="text-muted mb-0">
+            Resolved SOS cases from saved records.
+          </p>
+        </div>
+        <div className="text-right">
+          <button
+            type="button"
+            className="btn btn-outline-primary btn-sm"
+            onClick={fetchHistory}
+            disabled={loading}
+          >
+            {loading ? "Loading..." : "Refresh"}
+          </button>
+          {lastUpdated && (
+            <small className="d-block text-muted mt-1">
+              Updated {lastUpdated.toLocaleTimeString("en-IN")}
+            </small>
+          )}
+        </div>
+      </div>
+
+      {refreshError && (
+        <div className="alert alert-warning" role="status">
+          {refreshError}
+          {requests.length > 0 && " Showing the last successfully loaded data."}
+        </div>
+      )}
+
+      <div className="card mb-4">
+        <div className="card-body">
+          <div className="row">
+            <div className="col-md-12 mb-2">
+              <label className="sr-only" htmlFor="sos-history-search">
+                Search SOS history
+              </label>
+              <input
+                id="sos-history-search"
+                className="form-control"
+                type="search"
+                placeholder="Search SOS ID, user, location, or volunteer..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {loading && requests.length === 0 ? (
+        <div className="card">
+          <div className="card-body text-center py-5">
+            <p className="text-muted mb-0">Loading SOS history...</p>
+          </div>
+        </div>
+      ) : filteredRequests.length === 0 ? (
+        <div className="card">
+          <div className="card-body text-center py-5">
+            <i className="mdi mdi-history mdi-36px text-muted"></i>
+            <h5 className="mt-3">No SOS Cases Found</h5>
+            <p className="text-muted mb-0">
+              {requests.length === 0
+                ? "No resolved SOS cases have been recorded."
+                : "No historical SOS cases match your search."}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="row">
+          {filteredRequests.map((sos) => (
+            <div className="col-md-6 mb-4" key={sos._id}>
+              <div className="card h-100">
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-start mb-3">
+                    <div className="mr-2">
+                      <h5 className="mb-1">SOS {sos._id}</h5>
+                      <small className="text-muted">
+                        {sos.emergencyType || "Emergency Assistance"}
+                      </small>
+                    </div>
+                    <span className={`badge ${getStatusClass(sos.status)}`}>
+                      {sos.status}
+                    </span>
+                  </div>
+
+                  <div className="row mb-2">
+                    <HistoryField label="Woman User" value={sos.womanName} />
+                    <HistoryField
+                      label="Location"
+                      value={sos.womanAddress}
+                    />
+                    <HistoryField
+                      label="Volunteer"
+                      value={sos.volunteerName}
+                    />
+                    <HistoryField
+                      label="Request Created"
+                      value={formatDate(sos.createdAt)}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => setSelectedSOS(sos)}
+                  >
+                    View Case
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedSOS && (
+        <div
+          className="sos-history-backdrop"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setSelectedSOS(null);
+          }}
+          style={{
+            position: "fixed",
+            zIndex: 1050,
+            inset: 0,
+            overflowY: "auto",
+            backgroundColor: "rgba(0,0,0,0.5)",
+          }}
+        >
+          <div
+            className="modal-dialog modal-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sos-history-modal-title"
+            style={{ margin: "60px auto", maxWidth: "850px" }}
+          >
+            <div className="modal-content">
+              <div className="modal-header">
+                <div>
+                  <h5
+                    className="modal-title mb-1"
+                    id="sos-history-modal-title"
+                  >
+                    SOS Case Details
+                  </h5>
+                  <small className="text-muted">
+                    SOS {selectedSOS._id}
+                  </small>
+                </div>
+                <button
+                  type="button"
+                  className="close"
+                  aria-label="Close case details"
+                  onClick={() => setSelectedSOS(null)}
+                >
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+
+              <div className="modal-body">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="mb-0">Case Information</h5>
+                  <span
+                    className={`badge ${getStatusClass(selectedSOS.status)}`}
+                  >
+                    {selectedSOS.status}
+                  </span>
+                </div>
+                <div className="row">
+                  <HistoryField
+                    label="Woman User"
+                    value={selectedSOS.womanName}
+                  />
+                  <HistoryField
+                    label="Phone Number"
+                    value={selectedSOS.womanPhone}
+                  />
+                  <HistoryField
+                    label="Location"
+                    value={selectedSOS.womanAddress}
+                  />
+                  <HistoryField
+                    label="Emergency Type"
+                    value={selectedSOS.emergencyType}
+                  />
+                  <HistoryField
+                    label="Request Created"
+                    value={formatDate(selectedSOS.createdAt)}
+                  />
+                  <HistoryField
+                    label="Volunteer Assigned"
+                    value={formatDate(selectedSOS.assignedAt)}
+                  />
+                  <HistoryField
+                    label="Volunteer Accepted"
+                    value={formatDate(selectedSOS.acceptedAt)}
+                  />
+                  <HistoryField
+                    label="Resolved"
+                    value={formatDate(selectedSOS.resolvedAt)}
+                  />
+                  <HistoryField
+                    label="Volunteer"
+                    value={selectedSOS.volunteerName}
+                  />
+                  <HistoryField
+                    label="Volunteer ID"
+                    value={selectedSOS.volunteerId}
+                  />
+                  <HistoryField
+                    label="Volunteer Phone"
+                    value={selectedSOS.volunteerPhone}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

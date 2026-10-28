@@ -69,7 +69,7 @@ function VolunteerLogin() {
           };
 
           sessionStorage.setItem("mydata", JSON.stringify(data));
-          localStorage.setItem("mydata", JSON.stringify(data));
+          localStorage.removeItem("mydata");
 
           Swal.fire({
             icon: "success",

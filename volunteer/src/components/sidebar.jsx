@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import Axios from "axios";
 import { io } from "socket.io-client";
@@ -118,7 +118,7 @@ function Sidebar({ onClose }) {
     isActive ? "safeher-nav-link active" : "safeher-nav-link";
 
   return (
-    <div className="page-wrapper">
+    <>
       <style>
         {`
           /* =========================================
@@ -163,8 +163,8 @@ function Sidebar({ onClose }) {
           }
 
           .safeher-logo-image {
-            width: 165px;
-            height: 65px;
+            width: 190px;
+            height: 48px;
 
             object-fit: contain;
             object-position: center;
@@ -541,10 +541,10 @@ function Sidebar({ onClose }) {
 
           .menu-sidebar.safeher-collapsed
           .safeher-logo-image {
-            width: 42px;
-            height: 42px;
-
-            object-fit: contain;
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            object-position: left center;
           }
 
           /* =========================================
@@ -563,8 +563,8 @@ function Sidebar({ onClose }) {
           @media (max-width: 991px) {
 
             .safeher-logo-image {
-              width: 155px;
-              height: 60px;
+              width: 175px;
+              height: 44px;
             }
 
             .navbar__list > li > a.safeher-nav-link {
@@ -594,6 +594,12 @@ function Sidebar({ onClose }) {
               src="/images/icon/volunteer-logo.png"
               alt="SafeHer Volunteer"
               className="safeher-logo-image"
+            />
+            <img
+              src="/images/icon/volunteer-mini.png"
+              alt=""
+              aria-hidden="true"
+              className="safeher-mini-logo-image"
             />
           </NavLink>
 
@@ -717,7 +723,7 @@ function Sidebar({ onClose }) {
           </nav>
         </div>
       </aside>
-    </div>
+    </>
   );
 }
 

@@ -1,4 +1,3 @@
-import React from "react";
 import Swal from "sweetalert2";
 import Axios from "axios";
 
@@ -44,6 +43,7 @@ function AdminLogin() {
             JSON.stringify({
               _id: data._id,
               email: data.email,
+              token: data.sessionToken,
             }),
           );
 

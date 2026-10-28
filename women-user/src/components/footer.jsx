@@ -1,251 +1,141 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import "../safeher-css/footer.css";
 
 function Footer() {
+  const exploreLinks = [
+    { label: "Home", path: "/" },
+    { label: "About SafeHer", path: "/about" },
+    { label: "How It Works", path: "/how-it-works" },
+  ];
+
+  const safetyLinks = [
+    { label: "Safety Map", path: "/safety-map" },
+    { label: "Safety Resources", path: "/safety-resources" },
+    { label: "Safety Articles", path: "/safety-articles" },
+  ];
+
+  const helplines = [
+    { number: "112", label: "Emergency" },
+    { number: "181", label: "Women Helpline" },
+    { number: "1091", label: "Women in Distress" },
+  ];
+
   return (
     <footer className="safeher-footer">
-      <style>{`
-        .safeher-footer {
-          background: #172554;
-          color: #ffffff;
-          padding: 65px 0 20px;
-        }
+      <div className="safeher-footer-container">
+        <div className="safeher-footer-grid">
+          {/* BRAND */}
+          <div className="safeher-footer-brand">
+            <Link
+              to="/"
+              className="safeher-footer-logo-card"
+              aria-label="SafeHer home"
+            >
+              <img
+                src="assets/images/all-img/SafeHer logo.png"
+                alt="SafeHer - Because every woman deserves to feel safe"
+                className="safeher-footer-logo-img"
+              />
+            </Link>
 
-        .safeher-footer-logo {
-          font-family: "Poppins", sans-serif;
-          font-size: 28px;
-          font-weight: 700;
-          color: #ffffff;
-          margin-bottom: 15px;
-        }
-
-        .safeher-footer-logo span {
-          color: #e83e8c;
-        }
-
-        .safeher-footer-about {
-          color: #b9c3d8;
-          font-size: 13px;
-          line-height: 1.8;
-          max-width: 350px;
-          margin-bottom: 20px;
-        }
-
-        .safeher-footer-social {
-          display: flex;
-          gap: 10px;
-        }
-
-        .safeher-footer-social a {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(255,255,255,0.08);
-          color: #ffffff;
-          text-decoration: none;
-          transition: 0.3s ease;
-        }
-
-        .safeher-footer-social a:hover {
-          background: #e83e8c;
-          transform: translateY(-3px);
-        }
-
-        .safeher-footer h4 {
-          color: #ffffff;
-          font-size: 16px;
-          font-weight: 700;
-          margin-bottom: 20px;
-        }
-
-        .safeher-footer-links {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-
-        .safeher-footer-links li {
-          margin-bottom: 11px;
-        }
-
-        .safeher-footer-links a {
-          color: #b9c3d8;
-          font-size: 13px;
-          text-decoration: none;
-          transition: 0.3s ease;
-        }
-
-        .safeher-footer-links a:hover {
-          color: #e83e8c;
-          padding-left: 4px;
-        }
-
-        .safeher-footer-contact p {
-          color: #b9c3d8;
-          font-size: 13px;
-          margin-bottom: 12px;
-        }
-
-        .safeher-footer-contact i {
-          color: #e83e8c;
-          margin-right: 8px;
-        }
-
-        .safeher-footer-bottom {
-          margin-top: 45px;
-          padding-top: 20px;
-          border-top: 1px solid rgba(255,255,255,0.10);
-          text-align: center;
-        }
-
-        .safeher-footer-bottom p {
-          margin: 0;
-          color: #9da8c0;
-          font-size: 12px;
-        }
-
-        .safeher-footer-bottom span {
-          color: #e83e8c;
-        }
-
-        @media (max-width: 767px) {
-          .safeher-footer {
-            padding: 50px 0 20px;
-          }
-
-          .safeher-footer-col {
-            margin-bottom: 35px;
-          }
-
-          .safeher-footer-about {
-            margin-left: auto;
-            margin-right: auto;
-          }
-
-          .safeher-footer-social {
-            justify-content: center;
-          }
-
-          .safeher-footer-logo,
-          .safeher-footer h4 {
-            text-align: center;
-          }
-
-          .safeher-footer-links {
-            text-align: center;
-          }
-
-          .safeher-footer-contact {
-            text-align: center;
-          }
-        }
-      `}</style>
-
-      <div className="container">
-        <div className="row">
-          {/* ABOUT SAFEHER */}
-          <div className="col-lg-5 col-md-6 safeher-footer-col">
-            <div className="safeher-footer-logo">
-              Safe<span>Her</span>
-            </div>
-
-            <p className="safeher-footer-about">
-              SafeHer is a community safety platform designed to help women stay
-              connected, informed, prepared, and safer in everyday life.
+            <p className="safeher-footer-description">
+              SafeHer is a community safety platform designed to help women
+              explore safety information, identify safer areas, access helpful
+              resources and build a more safety-aware community.
             </p>
 
-            <div className="safeher-footer-social">
-              <a href="#" aria-label="Facebook">
-                <i className="fa-brands fa-facebook-f"></i>
-              </a>
-
-              <a href="#" aria-label="Instagram">
-                <i className="fa-brands fa-instagram"></i>
-              </a>
-
-              <a href="#" aria-label="Twitter">
-                <i className="fa-brands fa-twitter"></i>
-              </a>
-
-              <a href="#" aria-label="LinkedIn">
-                <i className="fa-brands fa-linkedin-in"></i>
-              </a>
+            <div className="safeher-footer-highlight">
+              <span className="safeher-footer-shield" aria-hidden="true">
+                ✓
+              </span>
+              <span>Awareness, preparedness and community support.</span>
             </div>
           </div>
 
-          {/* QUICK LINKS */}
-          <div className="col-lg-3 col-md-6 safeher-footer-col">
-            <h4>Quick Links</h4>
-
+          {/* EXPLORE */}
+          <nav className="safeher-footer-column" aria-label="Explore SafeHer">
+            <h3 className="safeher-footer-heading">Explore SafeHer</h3>
             <ul className="safeher-footer-links">
-              <li>
-                <a href="/">Home</a>
-              </li>
-              <li>
-                <a href="/about">About SafeHer</a>
-              </li>
-              <li>
-                <a href="/trusted-contacts">Trusted Contacts</a>
-              </li>
-              <li>
-                <a href="/safety-map">Safety Map</a>
-              </li>
-              <li>
-                <a href="/report-incident">Report Incident</a>
-              </li>
+              {exploreLinks.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.path}>{link.label}</Link>
+                </li>
+              ))}
             </ul>
-          </div>
+          </nav>
 
           {/* SAFETY */}
-          <div className="col-lg-2 col-md-6 safeher-footer-col">
-            <h4>Safety</h4>
-
+          <nav
+            className="safeher-footer-column"
+            aria-label="Safety and awareness"
+          >
+            <h3 className="safeher-footer-heading">Safety &amp; Awareness</h3>
             <ul className="safeher-footer-links">
-              <li>
-                <a href="/sostracking">Emergency SOS</a>
-              </li>
-              <li>
-                <a href="#">Safety Tips</a>
-              </li>
-              <li>
-                <a href="#">Safety Articles</a>
-              </li>
-              <li>
-                <a href="#">SafeHer AI</a>
-              </li>
+              {safetyLinks.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.path}>{link.label}</Link>
+                </li>
+              ))}
             </ul>
-          </div>
+          </nav>
 
-          {/* CONTACT */}
-          <div className="col-lg-2 col-md-6 safeher-footer-col">
-            <h4>Contact</h4>
+          {/* GET STARTED */}
+          <div className="safeher-footer-column safeher-footer-start">
+            <h3 className="safeher-footer-heading">Get Started</h3>
 
-            <div className="safeher-footer-contact">
-              <p>
-                <i className="fa-solid fa-envelope"></i>
-                support@safeher.com
+            <div className="safeher-footer-start-card">
+              <p className="safeher-footer-start-text">
+                Access your SafeHer account to use personalized safety features
+                and connect with the community.
               </p>
 
-              <p>
-                <i className="fa-solid fa-phone"></i>
-                Emergency Support
-              </p>
+              <Link to="/login" className="safeher-footer-cta">
+                Login to SafeHer
+                <span aria-hidden="true">→</span>
+              </Link>
 
-              <p>
-                <i className="fa-solid fa-shield-halved"></i>
-                Stay Safe
+              <p className="safeher-footer-login-note">
+                <span aria-hidden="true">🔒</span> Emergency SOS requires login.
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* HELPLINE STRIP (optional - delete this block if not needed) */}
+        <div className="safeher-footer-helplines">
+          <span className="safeher-footer-helplines-title">
+            Need help right now?
+          </span>
+          <div className="safeher-footer-helplines-list">
+            {helplines.map((item) => (
+              <a
+                key={item.number}
+                href={`tel:${item.number}`}
+                className="safeher-footer-helpline"
+              >
+                <strong>{item.number}</strong>
+                <span>{item.label}</span>
+              </a>
+            ))}
           </div>
         </div>
 
         {/* BOTTOM */}
         <div className="safeher-footer-bottom">
           <p>
-            © 2026 <span>SafeHer</span>. All Rights Reserved. | Because Every
-            Woman Deserves to Feel Safe.
+            © {new Date().getFullYear()}{" "}
+            <span className="safeher-footer-brand-name">SafeHer</span>. All
+            rights reserved.
+          </p>
+
+          <p className="safeher-footer-bottom-tagline">
+            Because Every Woman Deserves to Feel Safe.
+          </p>
+
+          <p className="safeher-footer-disclaimer">
+            SafeHer supports community safety and does not replace official
+            emergency services.
           </p>
         </div>
       </div>

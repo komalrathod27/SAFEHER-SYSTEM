@@ -851,7 +851,6 @@ function Home() {
           aria-label="Ask SafeHer AI"
         >
           <i className="fa-solid fa-robot"></i>
-          <span className="sh-ai-label">SafeHer AI</span>
           <span className="sh-ai-status" aria-hidden="true"></span>
         </button>
       </div>
