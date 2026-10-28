@@ -1,12 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import Axios from "axios";
 import {
   LineChart,
   Line,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -16,45 +14,60 @@ import {
 } from "recharts";
 import { Link } from "react-router-dom";
 
-const userGrowthData = [
-  { month: "Apr", users: 62 },
-  { month: "May", users: 74 },
-  { month: "Jun", users: 86 },
-  { month: "Jul", users: 97 },
-  { month: "Aug", users: 112 },
-  { month: "Sep", users: 128 },
-];
+const API_BASE = "http://localhost:3000";
 
-const sosData = [
-  { month: "Apr", requests: 18 },
-  { month: "May", requests: 24 },
-  { month: "Jun", requests: 21 },
-  { month: "Jul", requests: 29 },
-  { month: "Aug", requests: 35 },
-  { month: "Sep", requests: 31 },
-];
+function getAdminRequestConfig() {
+  const session = JSON.parse(sessionStorage.getItem("mydata") || "null");
+  return {
+    headers: session?.token
+      ? { Authorization: `Bearer ${session.token}` }
+      : {},
+  };
+}
 
-const incidentData = [
-  { name: "Approved", value: 65 },
-  { name: "Pending", value: 20 },
-  { name: "Rejected", value: 15 },
-];
+function formatSOSDate(value) {
+  if (!value) return "Not recorded";
 
-const volunteerAreaData = [
-  { area: "Vadodara", volunteers: 12 },
-  { area: "Ahmedabad", volunteers: 10 },
-  { area: "Surat", volunteers: 8 },
-  { area: "Other", volunteers: 5 },
-];
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not recorded";
+
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getSOSStatusBadge(status) {
+  if (["Pending", "Approved"].includes(status)) return "badge-warning";
+  if (status === "Active") return "badge-info";
+  if (status === "Resolved") return "badge-success";
+  if (status === "Cancelled") return "badge-secondary";
+  return "badge-light";
+}
 
 function Dashboard() {
+  const [summary, setSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState("");
+  const [growthPeriod, setGrowthPeriod] = useState("monthly");
+  const [growthData, setGrowthData] = useState([]);
+  const [growthTotal, setGrowthTotal] = useState(0);
+  const [growthLoading, setGrowthLoading] = useState(true);
+  const [growthError, setGrowthError] = useState("");
+  const [sosOverview, setSosOverview] = useState([]);
+  const [resolvedSOSTotal, setResolvedSOSTotal] = useState(0);
+  const [sosOverviewLoading, setSosOverviewLoading] = useState(true);
+  const [sosOverviewError, setSosOverviewError] = useState("");
   const usersession = sessionStorage.getItem("mydata");
-  const user = JSON.parse(usersession);
 
-  if (!usersession) {
-    alert("Please Login first...");
-    window.location.href = "/adminlogin";
-  }
+  useEffect(() => {
+    if (!usersession) {
+      alert("Please Login first...");
+      window.location.href = "/adminlogin";
+    }
+  }, [usersession]);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -67,6 +80,150 @@ function Dashboard() {
       document.body.removeChild(script);
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchSummary() {
+      if (!usersession) {
+        setSummaryLoading(false);
+        return;
+      }
+
+      try {
+        const response = await Axios.get(
+          `${API_BASE}/api/admin/dashboard/summary`,
+          getAdminRequestConfig(),
+        );
+
+        if (isMounted) {
+          setSummary(response.data);
+          setSummaryError("");
+        }
+      } catch (error) {
+        console.error("Admin dashboard summary fetch error:", error);
+        if (isMounted) {
+          setSummaryError(
+            "Unable to load dashboard summary. Please refresh the page.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setSummaryLoading(false);
+        }
+      }
+    }
+
+    fetchSummary();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [usersession]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchWomenGrowth() {
+      if (!usersession) {
+        setGrowthLoading(false);
+        return;
+      }
+
+      setGrowthLoading(true);
+      setGrowthError("");
+
+      try {
+        const response = await Axios.get(
+          `${API_BASE}/api/admin/dashboard/women-growth`,
+          {
+            ...getAdminRequestConfig(),
+            params: { period: growthPeriod },
+          },
+        );
+
+        if (isMounted) {
+          setGrowthData(response.data.data);
+          setGrowthTotal(response.data.totalRegistrations);
+        }
+      } catch (error) {
+        console.error("Women registration growth fetch error:", error);
+        if (isMounted) {
+          setGrowthData([]);
+          setGrowthError(
+            "Unable to load women registration growth. Please try again.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setGrowthLoading(false);
+        }
+      }
+    }
+
+    fetchWomenGrowth();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [growthPeriod, usersession]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchSOSOverview() {
+      if (!usersession) {
+        setSosOverviewLoading(false);
+        return;
+      }
+
+      try {
+        const response = await Axios.get(
+          `${API_BASE}/api/admin/dashboard/sos-overview`,
+          getAdminRequestConfig(),
+        );
+
+        if (isMounted) {
+          setSosOverview(response.data.data);
+          setResolvedSOSTotal(response.data.totalResolved);
+          setSosOverviewError("");
+        }
+      } catch (error) {
+        console.error("Admin SOS overview fetch error:", error);
+        if (isMounted) {
+          setSosOverview([]);
+          setSosOverviewError(
+            "Unable to load SOS overview. Please refresh the page.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setSosOverviewLoading(false);
+        }
+      }
+    }
+
+    fetchSOSOverview();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [usersession]);
+
+  const displayedValue = (value) => {
+    if (summaryLoading) return "...";
+    return typeof value === "number" ? value : "—";
+  };
+
+  const pendingActions = summary
+    ? summary.pendingVolunteers +
+      summary.pendingIncidentReports +
+      summary.articles.drafts +
+      summary.unassignedSOS
+    : null;
+
+  const getSummaryBadgeClass = (isAttention = false) =>
+    `badge badge-outline-${summaryError ? "secondary" : isAttention ? "danger" : "success"} badge-pill`;
 
   return (
     <>
@@ -84,90 +241,146 @@ function Dashboard() {
           <div className="col-12">
             <div className="card card-statistics">
               <div className="card-body">
+                {summaryError && (
+                  <div className="alert alert-danger" role="alert">
+                    {summaryError}
+                  </div>
+                )}
                 <div className="d-flex flex-column flex-md-row align-items-center justify-content-between">
                   {/* WOMEN USERS */}
-                  <div className="statistics-item">
+                  <Link
+                    to="/womenusers"
+                    className="statistics-item dashboard-statistics-link"
+                  >
                     <p>
                       <i className="icon-sm fa fa-users mr-2"></i>
                       Women Users
                     </p>
 
-                    <h2>128</h2>
+                    <h2>{displayedValue(summary?.womenUsers)}</h2>
 
-                    <label className="badge badge-outline-success badge-pill">
-                      12% increase
+                    <label className={getSummaryBadgeClass()}>
+                      Registered users
                     </label>
-                  </div>
+                  </Link>
 
                   {/* VOLUNTEERS */}
-                  <div className="statistics-item">
+                  <Link
+                    to="/allvolunteers"
+                    className="statistics-item dashboard-statistics-link"
+                  >
                     <p>
                       <i className="icon-sm fas fa-user-shield mr-2"></i>
                       Volunteers
                     </p>
 
-                    <h2>42</h2>
+                    <h2>{displayedValue(summary?.totalVolunteers)}</h2>
 
-                    <label className="badge badge-outline-success badge-pill">
-                      8% increase
+                    <label className={getSummaryBadgeClass()}>
+                      {summaryLoading
+                        ? "Loading..."
+                        : summaryError
+                          ? "Unavailable"
+                          : `${summary?.approvedVolunteers ?? 0} approved · ${summary?.pendingVolunteers ?? 0} pending`}
                     </label>
-                  </div>
+                  </Link>
 
                   {/* ACTIVE SOS */}
-                  <div className="statistics-item">
+                  <Link
+                    to="/sosmonitor"
+                    className="statistics-item dashboard-statistics-link"
+                  >
                     <p>
                       <i className="icon-sm fas fa-exclamation-triangle mr-2"></i>
                       Active SOS
                     </p>
 
-                    <h2>03</h2>
+                    <h2>{displayedValue(summary?.openSOS)}</h2>
 
-                    <label className="badge badge-outline-danger badge-pill">
-                      3 active cases
+                    <label
+                      className={getSummaryBadgeClass(
+                        summary?.unassignedSOS > 0,
+                      )}
+                    >
+                      {summaryLoading
+                        ? "Loading..."
+                        : summaryError
+                          ? "Unavailable"
+                          : `${summary?.unassignedSOS ?? 0} awaiting assignment`}
                     </label>
-                  </div>
+                  </Link>
 
                   {/* INCIDENT REPORTS */}
-                  <div className="statistics-item">
+                  <Link
+                    to="/adminreports"
+                    className="statistics-item dashboard-statistics-link"
+                  >
                     <p>
                       <i className="icon-sm fas fa-file-alt mr-2"></i>
                       Incident Reports
                     </p>
 
-                    <h2>56</h2>
+                    <h2>{displayedValue(summary?.totalIncidentReports)}</h2>
 
-                    <label className="badge badge-outline-success badge-pill">
-                      15% increase
+                    <label className={getSummaryBadgeClass()}>
+                      {summaryLoading
+                        ? "Loading..."
+                        : summaryError
+                          ? "Unavailable"
+                          : `${summary?.pendingIncidentReports ?? 0} awaiting review`}
                     </label>
-                  </div>
+                  </Link>
 
                   {/* SAFETY ARTICLES */}
-                  <div className="statistics-item">
+                  <Link
+                    to="/safetyarticles"
+                    className="statistics-item dashboard-statistics-link"
+                  >
                     <p>
                       <i className="icon-sm fas fa-book-open mr-2"></i>
                       Articles
                     </p>
 
-                    <h2>24</h2>
+                    <h2>{displayedValue(summary?.articles?.total)}</h2>
 
-                    <label className="badge badge-outline-success badge-pill">
-                      20 published
+                    <label className={getSummaryBadgeClass()}>
+                      {summaryLoading
+                        ? "Loading..."
+                        : summaryError
+                          ? "Unavailable"
+                          : `${summary?.articles?.published ?? 0} published · ${summary?.articles?.drafts ?? 0} drafts`}
                     </label>
-                  </div>
+                  </Link>
 
                   {/* PENDING ACTIONS */}
-                  <div className="statistics-item">
+                  <Link
+                    to="/dashboard#needs-attention"
+                    className="statistics-item dashboard-statistics-link"
+                    onClick={() => {
+                      document
+                        .getElementById("needs-attention")
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                  >
                     <p>
                       <i className="icon-sm fas fa-clock mr-2"></i>
-                      Pending
+                      Pending Actions
                     </p>
 
-                    <h2>12</h2>
+                    <h2>{displayedValue(pendingActions)}</h2>
 
-                    <label className="badge badge-outline-danger badge-pill">
-                      Needs attention
+                    <label
+                      className={getSummaryBadgeClass(pendingActions > 0)}
+                    >
+                      {summaryLoading
+                        ? "Loading..."
+                        : summaryError
+                          ? "Unavailable"
+                          : pendingActions > 0
+                            ? "Needs attention"
+                            : "All caught up"}
                     </label>
-                  </div>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -178,216 +391,227 @@ function Dashboard() {
         {/* USER GROWTH + SOS REQUESTS */}
         {/* ========================================= */}
 
-        <div className="row">
+        <div className="dashboard-chart-grid">
           {/* WOMEN USER GROWTH */}
-          <div className="col-md-6 grid-margin stretch-card">
+          <div className="dashboard-chart-column">
             <div className="card">
               <div className="card-body">
-                <h4 className="card-title">
-                  <i className="fas fa-chart-line mr-2"></i>
-                  Women User Growth
-                </h4>
+                <div className="d-flex flex-wrap justify-content-between align-items-start">
+                  <div>
+                    <h4 className="card-title">
+                      <i className="fas fa-chart-line mr-2"></i>
+                      Women User Growth
+                    </h4>
 
-                <p className="card-description">Monthly registration growth</p>
+                    <p className="card-description">
+                      New registrations over time
+                    </p>
+                  </div>
 
-                <div style={{ width: "100%", height: 300 }}>
-                  <ResponsiveContainer>
-                    <LineChart data={userGrowthData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-
-                      <XAxis dataKey="month" />
-
-                      <YAxis />
-
-                      <Tooltip />
-
-                      <Line
-                        type="monotone"
-                        dataKey="users"
-                        stroke="#2f80ed"
-                        strokeWidth={3}
-                        activeDot={{ r: 6 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <div
+                    className="btn-group btn-group-sm mb-3"
+                    role="group"
+                    aria-label="Women registration graph period"
+                  >
+                    {[
+                      ["daily", "Daily"],
+                      ["weekly", "Weekly"],
+                      ["monthly", "Monthly"],
+                      ["yearly", "Yearly"],
+                    ].map(([period, label]) => (
+                      <button
+                        key={period}
+                        type="button"
+                        className={`btn ${growthPeriod === period ? "btn-primary" : "btn-outline-primary"}`}
+                        aria-pressed={growthPeriod === period}
+                        onClick={() => setGrowthPeriod(period)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <small className="text-muted">
+                    {growthPeriod === "daily" && "Last 30 days"}
+                    {growthPeriod === "weekly" && "Last 12 weeks"}
+                    {growthPeriod === "monthly" && "Last 12 months"}
+                    {growthPeriod === "yearly" && "All available years"}
+                  </small>
+                  <span className="badge badge-light">
+                    {growthLoading
+                      ? "Loading total..."
+                      : growthError
+                        ? "Total unavailable"
+                        : `${growthTotal.toLocaleString("en-IN")} registrations`}
+                  </span>
+                </div>
+
+                {growthLoading ? (
+                  <div
+                    className="d-flex align-items-center justify-content-center text-muted"
+                    style={{ width: "100%", height: 300 }}
+                    role="status"
+                  >
+                    Loading registration data...
+                  </div>
+                ) : growthError ? (
+                  <div className="alert alert-danger" role="alert">
+                    {growthError}
+                  </div>
+                ) : (
+                  <div
+                    style={{ width: "100%", height: 300 }}
+                    aria-label={`${growthPeriod} women registrations chart`}
+                  >
+                    <ResponsiveContainer>
+                      <LineChart
+                        data={growthData}
+                        margin={{ top: 12, right: 12, bottom: 4, left: 0 }}
+                      >
+                        <CartesianGrid
+                          vertical={false}
+                          stroke="#e8edf5"
+                          strokeDasharray="4 4"
+                        />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 11, fill: "#64748b" }}
+                          tickLine={false}
+                          axisLine={{ stroke: "#cbd5e1" }}
+                          minTickGap={18}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          domain={[0, (dataMax) => Math.max(1, dataMax)]}
+                          tick={{ fontSize: 11, fill: "#64748b" }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={36}
+                        />
+                        <Tooltip
+                          labelStyle={{ color: "#172554", fontWeight: 700 }}
+                          formatter={(value) => [
+                            `${Number(value).toLocaleString("en-IN")} registrations`,
+                            "New women users",
+                          ]}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="registrations"
+                          name="New women users"
+                          stroke="#2f80ed"
+                          strokeWidth={3}
+                          dot={{
+                            r: 3,
+                            fill: "#ffffff",
+                            stroke: "#2f80ed",
+                            strokeWidth: 2,
+                          }}
+                          activeDot={{
+                            r: 6,
+                            fill: "#e83e8c",
+                            strokeWidth: 0,
+                          }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* SOS REQUESTS */}
-          <div className="col-md-6 grid-margin stretch-card">
+          <div className="dashboard-chart-column">
             <div className="card">
               <div className="card-body">
-                <h4 className="card-title">
-                  <i className="fas fa-exclamation-circle mr-2"></i>
-                  SOS Requests
-                </h4>
+                <div className="d-flex flex-wrap justify-content-between align-items-start">
+                  <div>
+                    <h4 className="card-title">
+                      <i className="fas fa-exclamation-circle mr-2"></i>
+                      SOS Overview
+                    </h4>
 
-                <p className="card-description">
-                  Monthly emergency request statistics
-                </p>
-
-                <div style={{ width: "100%", height: 300 }}>
-                  <ResponsiveContainer>
-                    <BarChart data={sosData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-
-                      <XAxis dataKey="month" />
-
-                      <YAxis />
-
-                      <Tooltip />
-
-                      <Bar
-                        dataKey="requests"
-                        fill="#e83e8c"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ========================================= */}
-        {/* INCIDENT + VOLUNTEER STATISTICS */}
-        {/* ========================================= */}
-
-        <div className="row">
-          {/* INCIDENT REPORT STATUS */}
-          <div className="col-md-4 grid-margin stretch-card">
-            <div className="card">
-              <div className="card-body d-flex flex-column">
-                <h4 className="card-title">
-                  <i className="fas fa-chart-pie mr-2"></i>
-                  Incident Reports
-                </h4>
-
-                <p className="card-description">Report moderation status</p>
-
-                <div
-                  className="flex-grow-1"
-                  style={{ width: "100%", height: 280 }}
-                >
-                  <ResponsiveContainer>
-                    <PieChart>
-                      <Pie
-                        data={incidentData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={85}
-                        label
-                      >
-                        {incidentData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={
-                              index === 0
-                                ? "#28a745"
-                                : index === 1
-                                  ? "#ffc107"
-                                  : "#dc3545"
-                            }
-                          />
-                        ))}
-                      </Pie>
-
-                      <Tooltip />
-
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* VOLUNTEER OVERVIEW */}
-          <div className="col-md-4 grid-margin stretch-card">
-            <div className="card">
-              <div className="card-body">
-                <h4 className="card-title">
-                  <i className="fas fa-user-shield mr-2"></i>
-                  Volunteer Overview
-                </h4>
-
-                <p className="card-description">
-                  Current volunteer availability
-                </p>
-
-                <div className="row text-center mt-4">
-                  <div className="col-6 mb-4">
-                    <h3 className="text-success">24</h3>
-
-                    <p className="text-muted">Available</p>
+                    <p className="card-description">
+                      SOS requests created and resolved each month
+                    </p>
                   </div>
-
-                  <div className="col-6 mb-4">
-                    <h3 className="text-warning">05</h3>
-
-                    <p className="text-muted">On SOS Duty</p>
-                  </div>
-
-                  <div className="col-6">
-                    <h3 className="text-secondary">08</h3>
-
-                    <p className="text-muted">Offline</p>
-                  </div>
-
-                  <div className="col-6">
-                    <h3 className="text-danger">05</h3>
-
-                    <p className="text-muted">Pending</p>
-                  </div>
+                  <span className="badge badge-light mb-3">
+                    {sosOverviewLoading
+                      ? "Loading resolved total..."
+                      : sosOverviewError
+                        ? "Resolved total unavailable"
+                        : `${resolvedSOSTotal.toLocaleString("en-IN")} resolved total`}
+                  </span>
                 </div>
 
-                <div className="text-center mt-4">
-                  <Link
-                    to="/allvolunteers"
-                    className="btn btn-outline-primary btn-sm"
+                {sosOverviewLoading ? (
+                  <div
+                    className="d-flex align-items-center justify-content-center text-muted"
+                    style={{ width: "100%", height: 300 }}
+                    role="status"
                   >
-                    View Volunteers
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* VOLUNTEER AREA */}
-          <div className="col-md-4 grid-margin stretch-card">
-            <div className="card">
-              <div className="card-body">
-                <h4 className="card-title">
-                  <i className="fas fa-map-marker-alt mr-2"></i>
-                  Volunteer Coverage
-                </h4>
-
-                <p className="card-description">Volunteers by service area</p>
-
-                <div style={{ width: "100%", height: 250 }}>
-                  <ResponsiveContainer>
-                    <BarChart data={volunteerAreaData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-
-                      <XAxis dataKey="area" />
-
-                      <YAxis />
-
-                      <Tooltip />
-
-                      <Bar
-                        dataKey="volunteers"
-                        fill="#172554"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                    Loading SOS data...
+                  </div>
+                ) : sosOverviewError ? (
+                  <div className="alert alert-danger" role="alert">
+                    {sosOverviewError}
+                  </div>
+                ) : (
+                  <div style={{ width: "100%", height: 300 }}>
+                    <ResponsiveContainer>
+                      <BarChart
+                        data={sosOverview}
+                        margin={{ top: 12, right: 12, bottom: 4, left: 0 }}
+                      >
+                        <CartesianGrid
+                          vertical={false}
+                          stroke="#e8edf5"
+                          strokeDasharray="4 4"
+                        />
+                        <XAxis
+                          dataKey="month"
+                          tick={{ fontSize: 11, fill: "#64748b" }}
+                          tickLine={false}
+                          axisLine={{ stroke: "#cbd5e1" }}
+                          minTickGap={18}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          domain={[0, (dataMax) => Math.max(1, dataMax)]}
+                          tick={{ fontSize: 11, fill: "#64748b" }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={36}
+                        />
+                        <Tooltip
+                          labelStyle={{ color: "#172554", fontWeight: 700 }}
+                          formatter={(value, name) => [
+                            `${Number(value).toLocaleString("en-IN")}`,
+                            name,
+                          ]}
+                        />
+                        <Legend />
+                        <Bar
+                          dataKey="requests"
+                          name="SOS Requests"
+                          fill="#e83e8c"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="resolved"
+                          name="Resolved"
+                          fill="#2f80ed"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -428,53 +652,43 @@ function Dashboard() {
                     </thead>
 
                     <tbody>
-                      <tr>
-                        <td className="font-weight-bold">SOS-1029</td>
-
-                        <td>Pooja Mehta</td>
-
-                        <td>Amit Shah</td>
-
-                        <td>
-                          <label className="badge badge-warning badge-pill">
-                            Assistance in Progress
-                          </label>
-                        </td>
-
-                        <td>10:53 AM</td>
-                      </tr>
-
-                      <tr>
-                        <td className="font-weight-bold">SOS-1028</td>
-
-                        <td>Anjali Desai</td>
-
-                        <td>Vishal Desai</td>
-
-                        <td>
-                          <label className="badge badge-warning badge-pill">
-                            Assistance in Progress
-                          </label>
-                        </td>
-
-                        <td>10:47 AM</td>
-                      </tr>
-
-                      <tr>
-                        <td className="font-weight-bold">SOS-1025</td>
-
-                        <td>Neha Patel</td>
-
-                        <td>Rahul Patel</td>
-
-                        <td>
-                          <label className="badge badge-info badge-pill">
-                            Volunteer Responding
-                          </label>
-                        </td>
-
-                        <td>10:34 AM</td>
-                      </tr>
+                      {summaryLoading ? (
+                        <tr>
+                          <td colSpan="5" className="text-center py-4">
+                            Loading recent SOS activity...
+                          </td>
+                        </tr>
+                      ) : summaryError ? (
+                        <tr>
+                          <td colSpan="5" className="text-center py-4">
+                            Recent SOS activity is unavailable.
+                          </td>
+                        </tr>
+                      ) : summary?.recentSOS?.length ? (
+                        summary.recentSOS.map((sos) => (
+                          <tr key={sos._id}>
+                            <td className="font-weight-bold">
+                              SOS-{String(sos._id).slice(-6).toUpperCase()}
+                            </td>
+                            <td>{sos.womanName || "Anonymous User"}</td>
+                            <td>{sos.volunteerName || "Unassigned"}</td>
+                            <td>
+                              <label
+                                className={`badge ${getSOSStatusBadge(sos.status)} badge-pill`}
+                              >
+                                {sos.status || "Unknown"}
+                              </label>
+                            </td>
+                            <td>{formatSOSDate(sos.createdAt)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="5" className="text-center py-4">
+                            No SOS activity yet.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -484,7 +698,10 @@ function Dashboard() {
 
           {/* NEEDS ATTENTION */}
 
-          <div className="col-md-4 grid-margin stretch-card">
+          <div
+            className="col-md-4 grid-margin stretch-card"
+            id="needs-attention"
+          >
             <div className="card">
               <div className="card-body">
                 <h4 className="card-title">
@@ -506,10 +723,11 @@ function Dashboard() {
                   </div>
 
                   <Link
-                    to="/pendingapplications"
+                    to="/allvolunteers"
                     className="btn btn-sm btn-outline-primary"
+                    aria-label="View pending volunteers"
                   >
-                    05
+                    {displayedValue(summary?.pendingVolunteers)}
                   </Link>
                 </div>
 
@@ -525,10 +743,11 @@ function Dashboard() {
                   </div>
 
                   <Link
-                    to="/incidentreports"
+                    to="/adminreports"
                     className="btn btn-sm btn-outline-primary"
+                    aria-label="Review incident reports"
                   >
-                    03
+                    {displayedValue(summary?.pendingIncidentReports)}
                   </Link>
                 </div>
 
@@ -546,50 +765,28 @@ function Dashboard() {
                   <Link
                     to="/safetyarticles"
                     className="btn btn-sm btn-outline-primary"
+                    aria-label="View draft safety articles"
                   >
-                    04
+                    {displayedValue(summary?.articles?.drafts)}
                   </Link>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* ========================================= */}
-        {/* SAFETY ARTICLES STATISTICS */}
-        {/* ========================================= */}
+                <div className="d-flex justify-content-between align-items-center mt-4">
+                  <div>
+                    <h5 className="mb-1">Unassigned SOS</h5>
 
-        <div className="row">
-          <div className="col-12 grid-margin">
-            <div className="card">
-              <div className="card-body">
-                <h4 className="card-title">
-                  <i className="fas fa-book-open mr-2"></i>
-                  Safety Articles
-                </h4>
-
-                <p className="card-description">
-                  Current article publishing overview
-                </p>
-
-                <div className="row text-center">
-                  <div className="col-md-4">
-                    <h2>24</h2>
-
-                    <p className="text-muted mb-0">Total Articles</p>
+                    <small className="text-muted">
+                      Requests waiting for volunteer assignment
+                    </small>
                   </div>
 
-                  <div className="col-md-4">
-                    <h2 className="text-success">20</h2>
-
-                    <p className="text-muted mb-0">Published</p>
-                  </div>
-
-                  <div className="col-md-4">
-                    <h2 className="text-warning">04</h2>
-
-                    <p className="text-muted mb-0">Draft Articles</p>
-                  </div>
+                  <Link
+                    to="/sosmonitor"
+                    className="btn btn-sm btn-outline-primary"
+                    aria-label="View unassigned SOS requests"
+                  >
+                    {displayedValue(summary?.unassignedSOS)}
+                  </Link>
                 </div>
               </div>
             </div>

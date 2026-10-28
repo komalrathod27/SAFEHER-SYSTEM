@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
@@ -8,9 +8,9 @@ function Header({ onToggle }) {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [pendingList, setPendingList] = useState([]);
+  const [profilePhoto, setProfilePhoto] = useState("");
 
-  const storedData =
-    sessionStorage.getItem("mydata") || localStorage.getItem("mydata");
+  const storedData = sessionStorage.getItem("mydata");
 
   const volunteerData = storedData ? JSON.parse(storedData) : null;
   const volunteerId = volunteerData?.user_id;
@@ -59,6 +59,41 @@ function Header({ onToggle }) {
   const volunteerName = volunteerData?.name || "Volunteer";
   const volunteerEmail = volunteerData?.email || "";
 
+  const fetchVolunteerPhoto = async () => {
+    if (!volunteerId) return;
+
+    try {
+      const response = await Axios.get(
+        `http://localhost:3000/api/getvolunteerprofile/${volunteerId}`,
+      );
+
+      const photo = response.data?.profile_photo;
+      setProfilePhoto(
+        photo
+          ? `http://localhost:3000/volunteer/${photo}`
+          : "/images/icon/avatar-01.jpg",
+      );
+    } catch (error) {
+      console.error("Profile photo fetch error:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchVolunteerPhoto();
+
+    const handleProfileUpdate = () => {
+      fetchVolunteerPhoto();
+    };
+
+    window.addEventListener("volunteer-profile-updated", handleProfileUpdate);
+    return () => {
+      window.removeEventListener(
+        "volunteer-profile-updated",
+        handleProfileUpdate,
+      );
+    };
+  }, [volunteerId]);
+
   const closeOtherMenus = (menu) => {
     if (menu !== "notification") setNotificationOpen(false);
     if (menu !== "account") setAccountOpen(false);
@@ -70,9 +105,19 @@ function Header({ onToggle }) {
     navigate("/sosrequests");
   };
 
+  const handleLogout = (e) => {
+    e.preventDefault();
+
+    sessionStorage.removeItem("mydata");
+    localStorage.removeItem("mydata");
+    localStorage.removeItem("targetSosId");
+
+    setAccountOpen(false);
+    navigate("/", { replace: true });
+  };
+
   return (
-    <div className="page-wrapper">
-      <header className="header-desktop">
+    <header className="header-desktop">
         <div className="section__content section__content--p30">
           <div className="container-fluid">
             <div className="header-wrap">
@@ -87,30 +132,6 @@ function Header({ onToggle }) {
               >
                 <i className="fa-solid fa-bars" aria-hidden="true"></i>
               </button>
-
-              {/* ================= SEARCH ================= */}
-              <form
-                className="form-header"
-                role="search"
-                onSubmit={(event) => event.preventDefault()}
-              >
-                <i
-                  className="fa-solid fa-magnifying-glass form-header__icon"
-                  aria-hidden="true"
-                ></i>
-
-                <input
-                  className="au-input au-input--xl"
-                  type="search"
-                  name="search"
-                  placeholder="Search anything..."
-                  aria-label="Search"
-                />
-
-                <kbd className="form-header__hint" aria-hidden="true">
-                  Ctrl K
-                </kbd>
-              </form>
 
               {/* ================= HEADER RIGHT SIDE ================= */}
               <div className="header-button">
@@ -289,7 +310,7 @@ function Header({ onToggle }) {
                     {/* Profile Image */}
                     <div className="image">
                       <img
-                        src="/images/icon/avatar-01.jpg"
+                        src={profilePhoto || "/images/icon/avatar-01.jpg"}
                         alt={volunteerName}
                       />
                     </div>
@@ -316,7 +337,9 @@ function Header({ onToggle }) {
                           <div className="image">
                             <a href="/profile">
                               <img
-                                src="/images/icon/avatar-01.jpg"
+                                src={
+                                  profilePhoto || "/images/icon/avatar-01.jpg"
+                                }
                                 alt={volunteerName}
                               />
                             </a>
@@ -343,7 +366,7 @@ function Header({ onToggle }) {
 
                         {/* ================= LOGOUT ================= */}
                         <div className="account-dropdown__footer">
-                          <a href="/logout">
+                          <a href="/" onClick={handleLogout}>
                             <i className="fa-solid fa-power-off"></i>
                             Logout
                           </a>
@@ -356,8 +379,7 @@ function Header({ onToggle }) {
             </div>
           </div>
         </div>
-      </header>
-    </div>
+    </header>
   );
 }
 

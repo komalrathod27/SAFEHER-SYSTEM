@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express"); //express is node.js framewrok that is used to create server/API.
 const http = require("http");
 const mongoose = require("mongoose"); //mongoose is used to connect to mongodb database.
+const crypto = require("crypto");
 const cors = require("cors"); //cors is used to allow cross-origin requests between frontend and backend.
 const bodyParser = require("body-parser"); //body-parser is used to parse(read) the body data.
 const googleMailService = require("./services/googleMailService");
@@ -31,6 +32,14 @@ const multer = require("multer"); //multer is used to handle file uploads in the
 const path = require("path"); //path is used to handle file paths in the backend.
 const fs = require("fs"); //for safety articles
 const PDFDocument = require("pdfkit"); //pdfkit is used to generate pdf files in the backend.
+const adminSessionSecret =
+  process.env.ADMIN_SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+
+if (!process.env.ADMIN_SESSION_SECRET) {
+  console.warn(
+    "ADMIN_SESSION_SECRET is not set; admin sessions will expire when the server restarts.",
+  );
+}
 
 app.use(express.json()); //express.json() is used to parse the body data in json format.this is important because the frontend will send the data in json format and we need to parse it to use it in our backend.
 app.use(cors()); //cors() is used to allow cross-origin requests between frontend and backend.
@@ -176,6 +185,8 @@ const volunteer = new mongoose.model(
     proof: String,
     reason: String,
     status: { type: String, default: "Pending" },
+    activeSOSId: { type: String, default: null },
+    activeSOSLockExpiresAt: { type: Date, default: null },
   }),
 );
 
@@ -1423,6 +1434,8 @@ app.put(
   "/api/updatevolunteerphoto/:_id",
   upload1.single("profilePhoto"),
   async (req, res) => {
+    let profilePhotoSaved = false;
+
     try {
       const { _id } = req.params;
 
@@ -1452,6 +1465,14 @@ app.put(
       // Update new photo
       volunteerData.profile_photo = req.file.filename;
       await volunteerData.save();
+      profilePhotoSaved = true;
+
+      await volunteerActivity.create({
+        volunteerId: String(volunteerData._id),
+        type: "PROFILE_UPDATED",
+        title: "Profile Photo Updated",
+        description: "Your volunteer profile photo was updated.",
+      });
 
       // Delete old photo only after successful database update
       if (oldPhoto) {
@@ -1468,14 +1489,17 @@ app.put(
       console.log("Update volunteer photo error:", error);
 
       // Delete newly uploaded file if database update fails
-      if (req.file) {
+      if (req.file && !profilePhotoSaved) {
         const newPhotoPath = req.file.path;
         if (fs.existsSync(newPhotoPath)) {
           fs.unlinkSync(newPhotoPath);
         }
       }
       res.status(500).json({
-        message: "Server error.",
+        profilePhotoUpdated: profilePhotoSaved,
+        message: profilePhotoSaved
+          ? "Profile photo was updated, but activity history could not be recorded."
+          : "Server error.",
       });
     }
   },
@@ -1559,6 +1583,87 @@ app.get("/api/volunteer-activity/:volunteerId", async (req, res) => {
 });
 
 //Admin login API
+function createAdminSessionToken(adminId) {
+  const payload = Buffer.from(
+    JSON.stringify({
+      adminId: String(adminId),
+      expiresAt: Date.now() + 8 * 60 * 60 * 1000,
+    }),
+  ).toString("base64url");
+  const signature = crypto
+    .createHmac("sha256", adminSessionSecret)
+    .update(payload)
+    .digest("base64url");
+
+  return `${payload}.${signature}`;
+}
+
+function decodeAdminSessionToken(token) {
+  try {
+    const [payload, signature, extra] = String(token || "").split(".");
+    if (!payload || !signature || extra) return null;
+
+    const expectedSignature = crypto
+      .createHmac("sha256", adminSessionSecret)
+      .update(payload)
+      .digest("base64url");
+    const providedBytes = Buffer.from(signature);
+    const expectedBytes = Buffer.from(expectedSignature);
+    if (
+      providedBytes.length !== expectedBytes.length ||
+      !crypto.timingSafeEqual(providedBytes, expectedBytes)
+    ) {
+      return null;
+    }
+
+    const session = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8"),
+    );
+    if (
+      !mongoose.Types.ObjectId.isValid(session.adminId) ||
+      !Number.isFinite(session.expiresAt) ||
+      session.expiresAt <= Date.now()
+    ) {
+      return null;
+    }
+
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+async function requireAdminSession(req, res, next) {
+  const authorization = req.get("authorization") || "";
+  const token = authorization.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length)
+    : "";
+  const session = decodeAdminSessionToken(token);
+
+  if (!session) {
+    return res.status(401).json({
+      message: "Admin session is missing or expired. Please sign in again.",
+    });
+  }
+
+  try {
+    const existingAdmin = await admin.exists({ _id: session.adminId });
+    if (!existingAdmin) {
+      return res.status(401).json({
+        message: "Admin account is no longer available. Please sign in again.",
+      });
+    }
+
+    req.adminId = session.adminId;
+    return next();
+  } catch (error) {
+    console.error("Error verifying admin session:", error);
+    return res.status(500).json({
+      message: "Unable to verify admin session.",
+    });
+  }
+}
+
 app.post("/api/adminlogin", async (req, res) => {
   const { email, password } = req.body;
 
@@ -1585,6 +1690,7 @@ app.post("/api/adminlogin", async (req, res) => {
     status: "Approved",
     _id: user._id,
     email: user.email,
+    sessionToken: createAdminSessionToken(user._id),
   });
 });
 
@@ -1964,6 +2070,142 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   return { text, meters };
 }
 
+function normalizeArea(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function isServiceAreaMatch(serviceArea, sosAddress) {
+  const normalizedArea = normalizeArea(serviceArea);
+  const normalizedAddress = normalizeArea(sosAddress);
+  if (!normalizedArea || !normalizedAddress) return false;
+
+  const areaWords = normalizedArea.split(/\s+/).filter((word) => word.length > 1);
+  return (
+    normalizedAddress.includes(normalizedArea) ||
+    (areaWords.length > 0 &&
+      areaWords.every((word) => normalizedAddress.includes(word)))
+  );
+}
+
+async function claimVolunteerForSOS(volunteerRecord, sosId) {
+  const volunteerId = String(volunteerRecord._id);
+  const otherActiveSOS = await sosAlert.exists({
+    volunteerId,
+    status: { $in: ["Approved", "Active"] },
+    _id: { $ne: sosId },
+  });
+  if (otherActiveSOS) return null;
+
+  if (volunteerRecord.activeSOSId) {
+    const linkedSOS = await sosAlert
+      .findById(volunteerRecord.activeSOSId)
+      .select("_id status volunteerId");
+    const isActiveAssignment =
+      linkedSOS &&
+      ["Approved", "Active"].includes(linkedSOS.status) &&
+      String(linkedSOS.volunteerId) === volunteerId;
+    const isCurrentReservation =
+      linkedSOS?.status === "Pending" &&
+      volunteerRecord.activeSOSLockExpiresAt &&
+      volunteerRecord.activeSOSLockExpiresAt.getTime() > Date.now();
+
+    if (isActiveAssignment || isCurrentReservation) return null;
+
+    const released = await releaseVolunteerSOSClaim(
+      volunteerId,
+      volunteerRecord.activeSOSId,
+    );
+    if (!released) return null;
+  }
+
+  return volunteer.findOneAndUpdate(
+    {
+      _id: volunteerRecord._id,
+      status: "Approved",
+      activeSOSId: null,
+    },
+    {
+      $set: {
+        activeSOSId: String(sosId),
+        activeSOSLockExpiresAt: new Date(Date.now() + 120_000),
+      },
+    },
+    { new: true },
+  );
+}
+
+async function releaseVolunteerSOSClaim(volunteerId, sosId) {
+  if (!volunteerId) return;
+
+  try {
+    const result = await volunteer.updateOne(
+      { _id: volunteerId, activeSOSId: String(sosId) },
+      {
+        $set: {
+          activeSOSId: null,
+          activeSOSLockExpiresAt: null,
+        },
+      },
+    );
+    return result.modifiedCount > 0;
+  } catch (error) {
+    console.error("Failed to release volunteer SOS assignment lock:", error);
+    return false;
+  }
+}
+
+async function notifyTrustedContactsOfVolunteerAssignment(sos) {
+  try {
+    const contacts = await trustedContact.find({ womanId: sos.womanId });
+    const recipients = contacts
+      .map((contact) => (contact.email || "").trim())
+      .filter((email) => email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+
+    if (recipients.length === 0) {
+      console.warn(
+        `No valid trusted-contact email addresses are configured for ${sos.womanName}.`,
+      );
+      return;
+    }
+
+    const result = await googleMailService.sendSOSVolunteerAssignedEmail({
+      recipients,
+      womanName: sos.womanName,
+      womanPhone: sos.womanPhone,
+      womanAddress: sos.womanAddress,
+      womanLat: sos.womanLat,
+      womanLng: sos.womanLng,
+      volunteerName: sos.volunteerName,
+      volunteerPhoto: sos.volunteerPhoto,
+      volunteerPhone: sos.volunteerPhone,
+      volunteerEmail: sos.volunteerEmail,
+      distance: sos.distance,
+    });
+
+    if (result?.preview) {
+      console.log(
+        `Volunteer assignment email preview logged for ${sos.womanName}.`,
+      );
+    } else if (result?.success) {
+      console.log(
+        `Volunteer assignment email sent to ${recipients.length} trusted contact(s) of ${sos.womanName}.`,
+      );
+    } else {
+      console.warn(
+        `Volunteer assignment email was not sent for ${sos.womanName}: ${result?.reason || "Unknown mail service response."}`,
+      );
+    }
+  } catch (error) {
+    console.error(
+      "Failed to notify trusted contacts about volunteer assignment:",
+      error,
+    );
+  }
+}
+
 // SOS Alert Schema
 const sosAlert = mongoose.model(
   "sosAlert",
@@ -1990,6 +2232,7 @@ const sosAlert = mongoose.model(
     volunteerPhoto: { type: String, default: null },
     volunteerLat: { type: Number, default: null },
     volunteerLng: { type: Number, default: null },
+    assignedAt: { type: Date, default: null },
     volunteerLocationShared: { type: Boolean, default: false },
     distance: { type: String, default: "" },
     distanceMeters: { type: Number, default: null },
@@ -2401,6 +2644,640 @@ app.get("/api/sos/all", async (req, res) => {
   }
 });
 
+app.get("/api/admin/sos/all", requireAdminSession, async (req, res) => {
+  try {
+    const requests = await sosAlert.find().sort({ createdAt: -1 });
+    const pendingCount = requests.filter((request) => request.status === "Pending")
+      .length;
+    const activeCount = requests.filter((request) =>
+      ["Approved", "Active"].includes(request.status),
+    ).length;
+
+    return res.status(200).json({
+      requests,
+      pendingCount,
+      activeCount,
+      totalCount: requests.length,
+    });
+  } catch (error) {
+    console.error("Error getting admin SOS requests:", error);
+    return res.status(500).json({
+      message: "Failed to retrieve admin SOS requests.",
+    });
+  }
+});
+
+app.get("/api/admin/dashboard/summary", requireAdminSession, async (req, res) => {
+  try {
+    const openSOSStatuses = ["Pending", "Approved", "Active"];
+    const attentionCutoff = new Date(Date.now() - 60_000);
+    const [
+      womenUsers,
+      totalVolunteers,
+      approvedVolunteers,
+      pendingVolunteers,
+      totalIncidentReports,
+      openSOS,
+      unassignedSOS,
+      pendingIncidentReports,
+      totalArticles,
+      publishedArticles,
+      draftArticles,
+      recentSOS,
+    ] = await Promise.all([
+      womanUser.countDocuments(),
+      volunteer.countDocuments(),
+      volunteer.countDocuments({ status: "Approved" }),
+      volunteer.countDocuments({ status: "Pending" }),
+      incidentReport.countDocuments(),
+      sosAlert.countDocuments({ status: { $in: openSOSStatuses } }),
+      sosAlert.countDocuments({
+        status: "Pending",
+        createdAt: { $lte: attentionCutoff },
+      }),
+      incidentReport.countDocuments({ status: "Under Review" }),
+      safetyArticle.countDocuments(),
+      safetyArticle.countDocuments({ status: "Published" }),
+      safetyArticle.countDocuments({ status: "Draft" }),
+      sosAlert
+        .find()
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("womanName volunteerName emergencyType status createdAt"),
+    ]);
+
+    return res.status(200).json({
+      womenUsers,
+      totalVolunteers,
+      approvedVolunteers,
+      pendingVolunteers,
+      totalIncidentReports,
+      openSOS,
+      unassignedSOS,
+      pendingIncidentReports,
+      articles: {
+        total: totalArticles,
+        published: publishedArticles,
+        drafts: draftArticles,
+      },
+      recentSOS,
+    });
+  } catch (error) {
+    console.error("Error getting admin dashboard summary:", error);
+    return res.status(500).json({
+      message: "Failed to retrieve admin dashboard summary.",
+    });
+  }
+});
+
+app.get(
+  "/api/admin/dashboard/sos-overview",
+  requireAdminSession,
+  async (req, res) => {
+    try {
+      const indiaOffset = 330 * 60 * 1000;
+      const indiaNow = new Date(Date.now() + indiaOffset);
+      const currentMonthStart = new Date(
+        Date.UTC(indiaNow.getUTCFullYear(), indiaNow.getUTCMonth(), 1),
+      );
+      const firstMonth = new Date(currentMonthStart);
+      firstMonth.setUTCMonth(firstMonth.getUTCMonth() - 11);
+      const startAt = new Date(firstMonth.getTime() - indiaOffset);
+      const endAt = new Date();
+
+      const [createdCounts, resolvedCounts, totalResolved] = await Promise.all([
+        sosAlert.aggregate([
+          {
+            $match: {
+              createdAt: { $gte: startAt, $lte: endAt, $type: "date" },
+            },
+          },
+          {
+            $group: {
+              _id: {
+                $dateToString: {
+                  format: "%Y-%m",
+                  date: "$createdAt",
+                  timezone: "Asia/Kolkata",
+                },
+              },
+              count: { $sum: 1 },
+            },
+          },
+        ]),
+        sosAlert.aggregate([
+          {
+            $match: {
+              status: "Resolved",
+              resolvedAt: { $gte: startAt, $lte: endAt, $type: "date" },
+            },
+          },
+          {
+            $group: {
+              _id: {
+                $dateToString: {
+                  format: "%Y-%m",
+                  date: "$resolvedAt",
+                  timezone: "Asia/Kolkata",
+                },
+              },
+              count: { $sum: 1 },
+            },
+          },
+        ]),
+        sosAlert.countDocuments({ status: "Resolved" }),
+      ]);
+      const createdByMonth = new Map(
+        createdCounts.map(({ _id, count }) => [_id, count]),
+      );
+      const resolvedByMonth = new Map(
+        resolvedCounts.map(({ _id, count }) => [_id, count]),
+      );
+      const data = Array.from({ length: 12 }, (_, index) => {
+        const month = new Date(firstMonth);
+        month.setUTCMonth(month.getUTCMonth() + index);
+        const key = `${month.getUTCFullYear()}-${String(
+          month.getUTCMonth() + 1,
+        ).padStart(2, "0")}`;
+
+        return {
+          month: month.toLocaleDateString("en-IN", {
+            month: "short",
+            year: "2-digit",
+            timeZone: "UTC",
+          }),
+          requests: createdByMonth.get(key) || 0,
+          resolved: resolvedByMonth.get(key) || 0,
+        };
+      });
+
+      return res.status(200).json({ totalResolved, data });
+    } catch (error) {
+      console.error("Error getting admin SOS overview:", error);
+      return res.status(500).json({
+        message: "Failed to retrieve admin SOS overview.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/admin/dashboard/women-growth",
+  requireAdminSession,
+  async (req, res) => {
+    const period = req.query.period || "monthly";
+    const periods = ["daily", "weekly", "monthly", "yearly"];
+
+    if (!periods.includes(period)) {
+      return res.status(400).json({
+        message: "Women growth period must be daily, weekly, monthly, or yearly.",
+      });
+    }
+
+    try {
+      const timezone = "Asia/Kolkata";
+      const indiaOffset = 330 * 60 * 1000;
+      const indiaNow = new Date(Date.now() + indiaOffset);
+      const currentDate = new Date(
+        Date.UTC(
+          indiaNow.getUTCFullYear(),
+          indiaNow.getUTCMonth(),
+          indiaNow.getUTCDate(),
+        ),
+      );
+      let startDate;
+      let dateFormat;
+      let buckets;
+
+      if (period === "daily") {
+        startDate = new Date(currentDate);
+        startDate.setUTCDate(startDate.getUTCDate() - 29);
+        dateFormat = "%Y-%m-%d";
+        buckets = Array.from({ length: 30 }, (_, index) => {
+          const date = new Date(startDate);
+          date.setUTCDate(date.getUTCDate() + index);
+          const key = date.toISOString().slice(0, 10);
+
+          return {
+            key,
+            label: date.toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              timeZone: "UTC",
+            }),
+          };
+        });
+      } else if (period === "weekly") {
+        const currentWeekday = currentDate.getUTCDay() || 7;
+        const currentWeekStart = new Date(currentDate);
+        currentWeekStart.setUTCDate(
+          currentWeekStart.getUTCDate() - currentWeekday + 1,
+        );
+        startDate = new Date(currentWeekStart);
+        startDate.setUTCDate(startDate.getUTCDate() - 11 * 7);
+        dateFormat = "%G-W%V";
+        buckets = Array.from({ length: 12 }, (_, index) => {
+          const weekStart = new Date(startDate);
+          weekStart.setUTCDate(weekStart.getUTCDate() + index * 7);
+          const thursday = new Date(weekStart);
+          thursday.setUTCDate(thursday.getUTCDate() + 3);
+          const yearStart = new Date(
+            Date.UTC(thursday.getUTCFullYear(), 0, 1),
+          );
+          const week = Math.ceil(
+            ((thursday - yearStart) / 86400000 + 1) / 7,
+          );
+
+          return {
+            key: `${thursday.getUTCFullYear()}-W${String(week).padStart(2, "0")}`,
+            label: weekStart.toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              timeZone: "UTC",
+            }),
+          };
+        });
+      } else if (period === "monthly") {
+        const currentMonthStart = new Date(
+          Date.UTC(indiaNow.getUTCFullYear(), indiaNow.getUTCMonth(), 1),
+        );
+        startDate = new Date(currentMonthStart);
+        startDate.setUTCMonth(startDate.getUTCMonth() - 11);
+        dateFormat = "%Y-%m";
+        buckets = Array.from({ length: 12 }, (_, index) => {
+          const date = new Date(startDate);
+          date.setUTCMonth(date.getUTCMonth() + index);
+          const key = `${date.getUTCFullYear()}-${String(
+            date.getUTCMonth() + 1,
+          ).padStart(2, "0")}`;
+
+          return {
+            key,
+            label: date.toLocaleDateString("en-IN", {
+              month: "short",
+              year: "2-digit",
+              timeZone: "UTC",
+            }),
+          };
+        });
+      } else {
+        const firstRegistration = await womanUser
+          .findOne({ createdAt: { $type: "date" } })
+          .sort({ createdAt: 1 })
+          .select("createdAt")
+          .lean();
+        const firstYear = firstRegistration
+          ? new Date(
+              new Date(firstRegistration.createdAt).getTime() + indiaOffset,
+            ).getUTCFullYear()
+          : indiaNow.getUTCFullYear();
+
+        startDate = new Date(Date.UTC(firstYear, 0, 1));
+        dateFormat = "%Y";
+        buckets = Array.from(
+          { length: indiaNow.getUTCFullYear() - firstYear + 1 },
+          (_, index) => {
+            const year = firstYear + index;
+            return { key: String(year), label: String(year) };
+          },
+        );
+      }
+
+      const startAt = new Date(startDate.getTime() - indiaOffset);
+      const endAt = new Date();
+      const [registrationCounts, totalRegistrations] = await Promise.all([
+        womanUser.aggregate([
+          {
+            $match: {
+              createdAt: { $gte: startAt, $lte: endAt, $type: "date" },
+            },
+          },
+          {
+            $group: {
+              _id: {
+                $dateToString: {
+                  format: dateFormat,
+                  date: "$createdAt",
+                  timezone,
+                },
+              },
+              registrations: { $sum: 1 },
+            },
+          },
+        ]),
+        womanUser.countDocuments({
+          createdAt: { $gte: startAt, $lte: endAt, $type: "date" },
+        }),
+      ]);
+      const countsByBucket = new Map(
+        registrationCounts.map(({ _id, registrations }) => [
+          _id,
+          registrations,
+        ]),
+      );
+
+      return res.status(200).json({
+        period,
+        totalRegistrations,
+        data: buckets.map(({ key, label }) => ({
+          label,
+          registrations: countsByBucket.get(key) || 0,
+        })),
+      });
+    } catch (error) {
+      console.error("Error getting women registration growth:", error);
+      return res.status(500).json({
+        message: "Failed to retrieve women registration growth.",
+      });
+    }
+  },
+);
+
+app.get("/api/admin/dashboard/analytics", requireAdminSession, async (req, res) => {
+  const days = Number(req.query.days || 7);
+  if (![7, 30, 90].includes(days)) {
+    return res.status(400).json({
+      message: "Dashboard analytics range must be 7, 30, or 90 days.",
+    });
+  }
+
+  try {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    const dateFilter = { createdAt: { $gte: startDate } };
+    const [sosStatuses, incidentStatuses] = await Promise.all([
+      sosAlert.aggregate([
+        { $match: dateFilter },
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+      incidentReport.aggregate([
+        { $match: dateFilter },
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    return res.status(200).json({
+      days,
+      sosStatuses: sosStatuses.map(({ _id, count }) => ({
+        status: _id || "Unknown",
+        count,
+      })),
+      incidentStatuses: incidentStatuses.map(({ _id, count }) => ({
+        status: _id || "Unknown",
+        count,
+      })),
+    });
+  } catch (error) {
+    console.error("Error getting admin dashboard analytics:", error);
+    return res.status(500).json({
+      message: "Failed to retrieve admin dashboard analytics.",
+    });
+  }
+});
+
+app.get(
+  "/api/admin/sos/:id/eligible-volunteers",
+  requireAdminSession,
+  async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid SOS ID." });
+    }
+
+    const sos = await sosAlert.findById(id);
+    if (!sos) {
+      return res.status(404).json({ message: "SOS request not found." });
+    }
+    if (sos.status !== "Pending") {
+      return res.status(409).json({
+        message: "Only pending SOS requests can be assigned.",
+      });
+    }
+
+    const createdAt = new Date(sos.createdAt).getTime();
+    const eligibleAt = createdAt + 60_000;
+    if (!Number.isFinite(createdAt)) {
+      return res.status(409).json({
+        message: "This SOS has no valid creation time and cannot be assigned.",
+      });
+    }
+    if (Date.now() < eligibleAt) {
+      return res.status(409).json({
+        message: "Admin assignment is available 60 seconds after the SOS starts.",
+        eligibleAt: new Date(eligibleAt).toISOString(),
+      });
+    }
+
+    const busyVolunteerIds = new Set(
+      (await sosAlert.distinct("volunteerId", {
+        status: { $in: ["Approved", "Active"] },
+        volunteerId: { $nin: [null, ""] },
+      })).map(String),
+    );
+    const rejectedVolunteerIds = new Set(
+      (sos.rejectedByVolunteerIds || []).map(String),
+    );
+    const approvedVolunteers = await volunteer
+      .find({ status: "Approved" })
+      .select(
+        "_id name contact_no serviceArea activeSOSId activeSOSLockExpiresAt",
+      );
+    const lockedVolunteers = approvedVolunteers.filter(
+      (candidate) => candidate.activeSOSId,
+    );
+    const lockedSOSRecords = lockedVolunteers.length
+      ? await sosAlert
+          .find({
+            _id: {
+              $in: lockedVolunteers.map((candidate) => candidate.activeSOSId),
+            },
+          })
+          .select("_id status volunteerId")
+      : [];
+    const lockedSOSById = new Map(
+      lockedSOSRecords.map((record) => [String(record._id), record]),
+    );
+
+    await Promise.all(
+      lockedVolunteers.map(async (candidate) => {
+        const linkedSOS = lockedSOSById.get(String(candidate.activeSOSId));
+        const isActiveAssignment =
+          linkedSOS &&
+          ["Approved", "Active"].includes(linkedSOS.status) &&
+          String(linkedSOS.volunteerId) === String(candidate._id);
+        const isCurrentReservation =
+          linkedSOS?.status === "Pending" &&
+          candidate.activeSOSLockExpiresAt &&
+          candidate.activeSOSLockExpiresAt.getTime() > Date.now();
+
+        if (!isActiveAssignment && !isCurrentReservation) {
+          const released = await releaseVolunteerSOSClaim(
+            candidate._id,
+            candidate.activeSOSId,
+          );
+          if (released) candidate.activeSOSId = null;
+        }
+      }),
+    );
+
+    const availableVolunteers = approvedVolunteers
+      .filter(
+        (candidate) =>
+          !candidate.activeSOSId &&
+          !busyVolunteerIds.has(String(candidate._id)) &&
+          !rejectedVolunteerIds.has(String(candidate._id)),
+      )
+      .map((candidate) => ({
+        _id: String(candidate._id),
+        name: candidate.name || "Volunteer",
+        contact_no: candidate.contact_no || "",
+        serviceArea: candidate.serviceArea || "",
+        areaMatch: isServiceAreaMatch(
+          candidate.serviceArea,
+          sos.womanAddress,
+        ),
+      }))
+      .sort(
+        (first, second) =>
+          Number(second.areaMatch) - Number(first.areaMatch) ||
+          first.name.localeCompare(second.name),
+      );
+
+    const areaMatches = availableVolunteers.filter(
+      (candidate) => candidate.areaMatch,
+    );
+
+    return res.status(200).json({
+      volunteers: areaMatches.length > 0 ? areaMatches : availableVolunteers,
+      hasAreaMatches: areaMatches.length > 0,
+    });
+  } catch (error) {
+    console.error("Error loading eligible volunteers for SOS assignment:", error);
+    return res.status(500).json({
+      message: "Failed to load eligible volunteers.",
+    });
+  }
+  },
+);
+
+app.put(
+  "/api/admin/sos/:id/assign",
+  requireAdminSession,
+  async (req, res) => {
+  let claimedVolunteerId = null;
+  let assignmentCommitted = false;
+
+  try {
+    const { id } = req.params;
+    const volunteerId = String(req.body?.volunteerId || "").trim();
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid SOS ID." });
+    }
+    if (!mongoose.Types.ObjectId.isValid(volunteerId)) {
+      return res.status(400).json({ message: "Invalid volunteer ID." });
+    }
+
+    const sos = await sosAlert.findById(id);
+    if (!sos) {
+      return res.status(404).json({ message: "SOS request not found." });
+    }
+    if (sos.status !== "Pending") {
+      return res.status(409).json({
+        message: "This SOS is no longer pending and cannot be assigned.",
+        },
+      );
+    }
+
+    const createdAt = new Date(sos.createdAt).getTime();
+    if (!Number.isFinite(createdAt) || Date.now() < createdAt + 60_000) {
+      return res.status(409).json({
+        message: "Admin assignment is available 60 seconds after the SOS starts.",
+      });
+    }
+
+    const volunteerRecord = await volunteer.findById(volunteerId);
+    if (!volunteerRecord || volunteerRecord.status !== "Approved") {
+      return res.status(409).json({
+        message: "Only approved volunteers can be assigned to an SOS.",
+      });
+    }
+    if (
+      (sos.rejectedByVolunteerIds || []).some(
+        (rejectedId) => String(rejectedId) === String(volunteerRecord._id),
+      )
+    ) {
+      return res.status(409).json({
+        message: "This volunteer has already dismissed this SOS.",
+      });
+    }
+
+    const claimedVolunteer = await claimVolunteerForSOS(
+      volunteerRecord,
+      sos._id,
+    );
+    if (!claimedVolunteer) {
+      return res.status(409).json({
+        message: "This volunteer is no longer available for assignment.",
+      });
+    }
+    claimedVolunteerId = String(claimedVolunteer._id);
+
+    const now = new Date();
+    const assignedSOS = await sosAlert.findOneAndUpdate(
+      {
+        _id: id,
+        status: "Pending",
+        createdAt: { $lte: new Date(now.getTime() - 60_000) },
+      },
+      {
+        $set: {
+          volunteerId: claimedVolunteerId,
+          volunteerName: claimedVolunteer.name || "Volunteer",
+          volunteerEmail: claimedVolunteer.email || "",
+          volunteerPhone: claimedVolunteer.contact_no || "",
+          volunteerPhoto: claimedVolunteer.profile_photo || null,
+          assignedAt: now,
+          updatedAt: now,
+          status: "Approved",
+        },
+      },
+      { new: true, runValidators: true },
+    );
+
+    if (!assignedSOS) {
+      await releaseVolunteerSOSClaim(claimedVolunteerId, id);
+      claimedVolunteerId = null;
+      return res.status(409).json({
+        message: "This SOS was updated by someone else and cannot be assigned.",
+      });
+    }
+    assignmentCommitted = true;
+
+    if (io) {
+      io.to(`sos_${id}`).emit("sos_approved", assignedSOS);
+      io.to(`sos_${id}`).emit("sos_status_changed", assignedSOS);
+      io.to("volunteers_channel").emit("sos_updated", assignedSOS);
+    }
+
+    await notifyTrustedContactsOfVolunteerAssignment(assignedSOS);
+
+    return res.status(200).json({
+      message: "Volunteer assigned to the SOS successfully.",
+      sos: assignedSOS,
+    });
+  } catch (error) {
+    if (claimedVolunteerId && !assignmentCommitted) {
+      await releaseVolunteerSOSClaim(claimedVolunteerId, req.params.id);
+    }
+    console.error("Error assigning volunteer to SOS:", error);
+    return res.status(500).json({
+      message: "Failed to assign volunteer to SOS.",
+    });
+  }
+});
+
 // 4. GET SINGLE SOS DETAILS
 app.get("/api/sos/details/:id", async (req, res) => {
   try {
@@ -2418,20 +3295,23 @@ app.get("/api/sos/details/:id", async (req, res) => {
 // 5. VOLUNTEER APPROVES / ACCEPTS SOS
 
 app.put("/api/sos/approve/:id", async (req, res) => {
+  let claimedVolunteerId = null;
+  let assignmentCommitted = false;
+
   try {
     const { id } = req.params;
     const {
       volunteerId,
-      volunteerName,
-      volunteerEmail,
-      volunteerPhone,
       volunteerLat,
       volunteerLng,
     } = req.body;
 
-    if (!volunteerId) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid SOS ID." });
+    }
+    if (!mongoose.Types.ObjectId.isValid(volunteerId)) {
       return res.status(400).json({
-        message: "Volunteer ID is required.",
+        message: "A valid volunteer ID is required.",
       });
     }
 
@@ -2450,30 +3330,39 @@ app.put("/api/sos/approve/:id", async (req, res) => {
     }
 
     const now = new Date();
+    const volRecord = await volunteer.findById(volunteerId);
+    if (!volRecord || volRecord.status !== "Approved") {
+      return res.status(403).json({
+        message: "Only approved volunteers can accept SOS requests.",
+      });
+    }
+    if (
+      (existingSos.rejectedByVolunteerIds || []).some(
+        (rejectedId) => String(rejectedId) === String(volRecord._id),
+      )
+    ) {
+      return res.status(409).json({
+        message: "You have already dismissed this SOS request.",
+      });
+    }
 
-    // Query volunteer record to fetch verified profile photo and information
-    let volRecord = null;
-    try {
-      if (mongoose.Types.ObjectId.isValid(volunteerId)) {
-        volRecord = await volunteer.findById(volunteerId);
-      } else {
-        volRecord = await volunteer.findOne({
-          $or: [{ _id: volunteerId }, { email: volunteerEmail }, { name: volunteerName }],
-        });
-      }
-    } catch (_) {}
-
-    const resolvedPhoto =
-      req.body.volunteerPhoto || volRecord?.profile_photo || existingSos.volunteerPhoto || null;
+    const claimedVolunteer = await claimVolunteerForSOS(volRecord, id);
+    if (!claimedVolunteer) {
+      return res.status(409).json({
+        message: "You are already assigned to another SOS or are unavailable.",
+      });
+    }
+    claimedVolunteerId = String(claimedVolunteer._id);
 
     const updateFields = {
-      volunteerId,
-      volunteerName: volunteerName || volRecord?.name || "Responding Volunteer",
-      volunteerEmail: volunteerEmail || volRecord?.email || existingSos.volunteerEmail,
-      volunteerPhone: volunteerPhone || volRecord?.contact_no || existingSos.volunteerPhone,
-      volunteerPhoto: resolvedPhoto,
+      volunteerId: claimedVolunteerId,
+      volunteerName: claimedVolunteer.name || "Responding Volunteer",
+      volunteerEmail: claimedVolunteer.email || "",
+      volunteerPhone: claimedVolunteer.contact_no || "",
+      volunteerPhoto: claimedVolunteer.profile_photo || null,
       status: "Approved",
       acceptedAt: existingSos.acceptedAt || now,
+      assignedAt: existingSos.assignedAt || now,
       updatedAt: now,
     };
 
@@ -2506,10 +3395,13 @@ app.put("/api/sos/approve/:id", async (req, res) => {
     );
 
     if (!sos) {
+      await releaseVolunteerSOSClaim(claimedVolunteerId, id);
+      claimedVolunteerId = null;
       return res.status(409).json({
         message: "Another volunteer has already accepted this SOS.",
       });
     }
+    assignmentCommitted = true;
 
     if (io) {
       io.to(`sos_${id}`).emit("sos_approved", sos);
@@ -2517,39 +3409,7 @@ app.put("/api/sos/approve/:id", async (req, res) => {
       io.to("volunteers_channel").emit("sos_updated", sos);
     }
 
-    // Send Volunteer Assigned Update Email to Trusted Contacts via Google Mail Service
-    try {
-      const contacts = await trustedContact.find({ womanId: sos.womanId });
-      const recipientEmails = contacts
-        .map((c) => (c.email || "").trim())
-        .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
-
-      if (recipientEmails.length > 0) {
-        googleMailService.sendSOSVolunteerAssignedEmail({
-          recipients: recipientEmails,
-          womanName: sos.womanName,
-          womanPhone: sos.womanPhone,
-          womanAddress: sos.womanAddress,
-          womanLat: sos.womanLat,
-          womanLng: sos.womanLng,
-          volunteerName: sos.volunteerName,
-          volunteerPhoto: sos.volunteerPhoto,
-          volunteerPhone: sos.volunteerPhone,
-          volunteerEmail: sos.volunteerEmail,
-          distance: sos.distance,
-        }).then((mailRes) => {
-          if (mailRes?.preview) {
-            console.log(`ℹ️ Volunteer Assigned email preview logged for trusted contacts of ${sos.womanName}`);
-          } else if (mailRes?.success) {
-            console.log(`✅ Volunteer Assigned email sent via Google to ${recipientEmails.length} trusted contact(s) of ${sos.womanName}`);
-          }
-        }).catch((err) => {
-          console.error("❌ Failed to send volunteer assigned email to trusted contacts:", err.message);
-        });
-      }
-    } catch (mailErr) {
-      console.error("Error looking up trusted contacts for volunteer assignment email:", mailErr);
-    }
+    await notifyTrustedContactsOfVolunteerAssignment(sos);
 
     // Send Volunteer Assigned SMS to Trusted Contacts (Tier 1: Dev 100 SMS pack -> Tier 2: Fast2SMS -> Tier 3: Both exhausted alert)
     let smsStatus = null;
@@ -2589,6 +3449,9 @@ app.put("/api/sos/approve/:id", async (req, res) => {
       smsStatus: smsStatus,
     });
   } catch (error) {
+    if (claimedVolunteerId && !assignmentCommitted) {
+      await releaseVolunteerSOSClaim(claimedVolunteerId, req.params.id);
+    }
     console.error("Error approving SOS:", error);
 
     return res.status(500).json({
@@ -2798,6 +3661,7 @@ app.put("/api/sos/resolve/:id", async (req, res) => {
     sos.resolvedAt = new Date();
     sos.updatedAt = new Date();
     await sos.save();
+    await releaseVolunteerSOSClaim(sos.volunteerId, sos._id);
 
     if (io) {
       io.to(`sos_${id}`).emit("sos_resolved", sos);
@@ -2876,6 +3740,7 @@ app.put("/api/sos/cancel/:id", async (req, res) => {
     sos.status = "Cancelled";
     sos.updatedAt = new Date();
     await sos.save();
+    await releaseVolunteerSOSClaim(sos.volunteerId, sos._id);
 
     if (io) {
       io.to(`sos_${id}`).emit("sos_cancelled", sos);

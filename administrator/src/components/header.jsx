@@ -1,22 +1,27 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Axios from "axios";
+import AdminInitials from "./AdminInitials";
 
 function Header() {
   const [adminData, setAdminData] = useState(null);
 
   useEffect(() => {
-    const data = JSON.parse(sessionStorage.getItem("mydata"));
-    if (data && data._id) {
+    const loadAdminProfile = () => {
+      const data = JSON.parse(sessionStorage.getItem("mydata") || "null");
+      if (!data?._id) return;
+
       Axios.get(`http://localhost:3000/api/getadminprofile/${data._id}`)
         .then((res) => {
-          if (res.data.status === "Success") {
-            setAdminData(res.data.data);
-          }
+          if (res.data.status === "Success") setAdminData(res.data.data);
         })
-        .catch((error) => {
-          console.log("Header Admin API Error:", error);
-        });
-    }
+        .catch((error) => console.log("Header Admin API Error:", error));
+    };
+
+    loadAdminProfile();
+    window.addEventListener("adminProfileUpdated", loadAdminProfile);
+
+    return () =>
+      window.removeEventListener("adminProfileUpdated", loadAdminProfile);
   }, []);
 
   const handleLogout = (e) => {
@@ -29,10 +34,10 @@ function Header() {
       <nav className="navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row default-layout-navbar">
         <div className="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
           <a className="navbar-brand brand-logo" href="/">
-            <img src="/images/SafeHer logo.png" alt="logo" />
+            <img src="/images/SafeHer logo.png" alt="SafeHer" />
           </a>
           <a className="navbar-brand brand-logo-mini" href="/">
-            <img src="/images/SafeHer logo.png" alt="logo" />
+            <img src="/images/mini-logo.png" alt="SafeHer" />
           </a>
         </div>
         <div className="navbar-menu-wrapper d-flex align-items-stretch">
@@ -43,25 +48,7 @@ function Header() {
           >
             <span className="fas fa-bars"></span>
           </button>
-          <ul className="navbar-nav">
-            <li className="nav-item nav-search d-none d-md-flex">
-              <div className="nav-link">
-                <div className="input-group">
-                  <div className="input-group-prepend">
-                    <span className="input-group-text">
-                      <i className="fas fa-search"></i>
-                    </span>
-                  </div>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Search"
-                    aria-label="Search"
-                  />
-                </div>
-              </div>
-            </li>
-          </ul>
+
           <ul className="navbar-nav navbar-nav-right">
             <li className="nav-item nav-profile dropdown">
               <a
@@ -70,7 +57,10 @@ function Header() {
                 data-toggle="dropdown"
                 id="profileDropdown"
               >
-                <img src="images/faces/face5.jpg" alt="profile" />
+                <AdminInitials
+                  name={adminData?.name}
+                  className="admin-initials-header"
+                />
               </a>
               <div
                 className="dropdown-menu dropdown-menu-right navbar-dropdown"

@@ -100,7 +100,8 @@ body.theme-2026 .menu-sidebar .logo a {
 }
 
 body.theme-2026 .menu-sidebar .logo img {
-  height: 26px;
+  height: 42px;
+  max-width: 205px;
   width: auto;
   display: block;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
@@ -5851,11 +5852,10 @@ body.theme-2026 .header-desktop .container-fluid {
   margin: 0 !important;
 }
 
-/* The actual layout — CSS Grid with three columns:
-     [hamburger]  [search/flex space]  [actions] */
+/* The actual layout — CSS Grid with a spacer between the navigation and actions. */
 body.theme-2026 .header-wrap {
   display: grid !important;
-  grid-template-columns: auto 1fr auto !important;
+  grid-template-columns: auto 1fr !important;
   column-gap: 12px !important;
   align-items: center !important;
   width: 100% !important;
@@ -5865,20 +5865,14 @@ body.theme-2026 .header-wrap {
   margin: 0 !important;
 }
 
-/* Each direct child sits in its own column */
+/* Keep the navigation toggle and account actions on opposite sides. */
 body.theme-2026 .header-wrap > .sidebar-toggle {
   grid-column: 1 !important;
   justify-self: start !important;
 }
 
-body.theme-2026 .header-wrap > .form-header {
-  grid-column: 2 !important;
-  justify-self: stretch !important;
-  margin: 0 !important;
-}
-
 body.theme-2026 .header-wrap > .header-button {
-  grid-column: 3 !important;
+  grid-column: 2 !important;
   justify-self: end !important;
   margin: 0 !important;
 }
@@ -5887,6 +5881,9 @@ body.theme-2026 .header-wrap > .header-button {
 @media (max-width: 991.98px) {
   body.theme-2026 .header-desktop {
     height: 60px !important;
+  }
+  body.theme-2026 .page-container {
+    top: 0 !important;
   }
   body.theme-2026 .main-content {
     padding-top: 60px !important;
@@ -8477,4 +8474,30 @@ body.theme-2026 .demo-label {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 6px;
+}
+
+body.theme-2026 .menu-sidebar .logo .safeher-logo-image {
+  display: block;
+  width: 220px;
+  max-width: 100%;
+  height: 66px;
+  object-fit: contain;
+  object-position: center;
+}
+
+body.theme-2026 .menu-sidebar .logo .safeher-mini-logo-image {
+  display: none;
+}
+
+body.theme-2026 .menu-sidebar.safeher-collapsed .logo .safeher-logo-image {
+  display: none;
+}
+
+body.theme-2026 .menu-sidebar.safeher-collapsed .logo .safeher-mini-logo-image {
+  display: block;
+  width: 52px;
+  max-width: none;
+  height: 52px;
+  object-fit: contain;
+  object-position: center;
 }

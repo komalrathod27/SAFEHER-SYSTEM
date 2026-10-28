@@ -140,7 +140,6 @@ function Header() {
                       <li>
                         <a href="/myreports">My Reports</a>
                       </li>
-
                     </>
                   )}
                 </ul>
@@ -167,17 +166,6 @@ function Header() {
                   </div>
                 ) : (
                   <>
-                    {/* NOTIFICATION */}
-                    <a
-                      href="/notifications"
-                      className="notification-link"
-                      title="Notifications"
-                    >
-                      <i className="fa-regular fa-bell"></i>
-
-                      <span className="notification-badge">3</span>
-                    </a>
-
                     {/* PROFILE DROPDOWN */}
                     <div className="profile-dropdown">
                       <button className="profile-button">

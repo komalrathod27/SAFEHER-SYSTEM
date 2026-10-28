@@ -379,6 +379,7 @@ function Profile() {
             console.log("Profile photo upload error:", photoError);
 
             await fetchVolunteerProfile(volunteerData.user_id);
+            window.dispatchEvent(new Event("volunteer-profile-updated"));
 
             setSelectedPhoto(null);
             setPhotoPreview(null);
@@ -387,8 +388,12 @@ function Profile() {
             setEditMode(false);
 
             Swal.fire({
-              icon: "error",
-              title: "Photo Upload Failed",
+              icon: photoError.response?.data?.profilePhotoUpdated
+                ? "warning"
+                : "error",
+              title: photoError.response?.data?.profilePhotoUpdated
+                ? "Photo Updated"
+                : "Photo Upload Failed",
               text:
                 photoError.response?.data?.message ||
                 "Profile information was saved, but the new photo could not be uploaded.",

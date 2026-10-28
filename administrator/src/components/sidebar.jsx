@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Axios from "axios";
+import AdminInitials from "./AdminInitials";
 
 function Sidebar() {
   const [adminData, setAdminData] = useState(null);
@@ -38,7 +39,10 @@ function Sidebar() {
           <li className="nav-item nav-profile">
             <div className="nav-link">
               <div className="profile-image">
-                <img src="images/faces/face5.jpg" alt="Admin" />
+                <AdminInitials
+                  name={adminData?.name}
+                  className="admin-initials-sidebar"
+                />
               </div>
               <div className="profile-name">
                 <p className="name">{adminData?.name || "Admin"}</p>
@@ -95,13 +99,8 @@ function Sidebar() {
             <div className="collapse" id="ui-basic">
               <ul className="nav flex-column sub-menu">
                 <li className="nav-item">
-                  <a className="nav-link" href="/adminsosrequests">
-                    SOS Requests
-                  </a>
-                </li>
-                <li className="nav-item">
-                  <a className="nav-link" href="/adminactivesos">
-                    Active SOS
+                  <a className="nav-link" href="/sosmonitor">
+                    SOS Monitoring
                   </a>
                 </li>
                 <li className="nav-item">

@@ -1,31 +1,68 @@
-import React, { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 
 function AdminReports() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reportsError, setReportsError] = useState("");
   const [selectedReport, setSelectedReport] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectionBox, setShowRejectionBox] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  useEffect(() => {
-    fetchReports();
-  }, []);
-
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     try {
       const response = await axios.get(
         "http://localhost:3000/api/getadminincidentreports",
       );
 
       setReports(response.data);
+      setReportsError("");
     } catch (error) {
-      console.log(error);
+      console.error("Incident reports fetch error:", error);
+      setReportsError("Unable to load incident report counts.");
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadReports() {
+      try {
+        const response = await axios.get(
+          "http://localhost:3000/api/getadminincidentreports",
+        );
+        if (isMounted) {
+          setReports(response.data);
+          setReportsError("");
+        }
+      } catch (error) {
+        console.error("Incident reports fetch error:", error);
+        if (isMounted) {
+          setReportsError("Unable to load incident report counts.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadReports();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const reportStatusCounts = {
+    underReview: reports.filter((report) => report.status === "Under Review")
+      .length,
+    verified: reports.filter((report) => report.status === "Verified").length,
+    rejected: reports.filter((report) => report.status === "Rejected").length,
   };
 
   const filteredReports = reports.filter((report) => {
@@ -53,6 +90,56 @@ function AdminReports() {
             <p className="text-muted mb-0">
               Review and manage incident reports submitted by women users.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {reportsError && (
+        <div className="alert alert-danger" role="alert">
+          {reportsError}
+        </div>
+      )}
+
+      <div className="row">
+        <div className="col-md-4 grid-margin stretch-card">
+          <div className="card">
+            <div className="card-body">
+              <p className="card-title text-muted mb-2">Under Review</p>
+              <h2 className="text-warning mb-0">
+                {loading || reportsError
+                  ? "—"
+                  : reportStatusCounts.underReview.toLocaleString("en-IN")}
+              </h2>
+              <small className="text-muted">Reports awaiting review</small>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-md-4 grid-margin stretch-card">
+          <div className="card">
+            <div className="card-body">
+              <p className="card-title text-muted mb-2">Verified</p>
+              <h2 className="text-success mb-0">
+                {loading || reportsError
+                  ? "—"
+                  : reportStatusCounts.verified.toLocaleString("en-IN")}
+              </h2>
+              <small className="text-muted">Reports verified by admin</small>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-md-4 grid-margin stretch-card">
+          <div className="card">
+            <div className="card-body">
+              <p className="card-title text-muted mb-2">Rejected</p>
+              <h2 className="text-danger mb-0">
+                {loading || reportsError
+                  ? "—"
+                  : reportStatusCounts.rejected.toLocaleString("en-IN")}
+              </h2>
+              <small className="text-muted">Reports rejected by admin</small>
+            </div>
           </div>
         </div>
       </div>

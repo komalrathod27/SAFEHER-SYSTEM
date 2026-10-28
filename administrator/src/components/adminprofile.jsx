@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Axios from "axios";
 import Swal from "sweetalert2";
+import AdminInitials from "./AdminInitials";
 
 function AdminProfile() {
   const [adminData, setAdminData] = useState(null);
@@ -163,10 +164,9 @@ function AdminProfile() {
           <div className="card">
             {/* Profile Header */}
             <div className="card-body text-center pb-3">
-              <img
-                src="/images/faces/face5.jpg"
-                alt="Admin Profile"
-                className="img-lg rounded-circle"
+              <AdminInitials
+                name={adminData?.name}
+                className="admin-initials-profile"
               />
 
               <h3 className="mt-3 mb-1 font-weight-bold">{adminData?.name}</h3>
