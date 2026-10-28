@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
 import "../safeher-css/profile.css";
@@ -17,25 +17,32 @@ function Profile() {
   const [isChanging, setIsChanging] = useState(false);
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    let isMounted = true;
+    const mydata = JSON.parse(localStorage.getItem("mydata") || "null");
 
-  const fetchProfile = () => {
-    const mydata = JSON.parse(localStorage.getItem("mydata"));
+    async function loadProfile() {
+      if (!mydata?.user_id) {
+        return;
+      }
 
-    if (!mydata || !mydata.user_id) {
-      return;
+      try {
+        const response = await axios.get(
+          `http://localhost:3000/api/getwomanuserdetails/${mydata.user_id}`,
+        );
+        if (isMounted) {
+          setUser(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      }
     }
 
-    axios
-      .get(`http://localhost:3000/api/getwomanuserdetails/${mydata.user_id}`)
-      .then((response) => {
-        setUser(response.data);
-      })
-      .catch((error) => {
-        console.log("Error fetching profile:", error);
-      });
-  };
+    loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleEditChange = (e) => {
     setEditData({
@@ -104,6 +111,7 @@ function Profile() {
       );
 
       setUser(response.data.user);
+      window.dispatchEvent(new Event("womanProfileUpdated"));
       Swal.fire({
         icon: "success",
         title: "Photo Updated",
@@ -188,6 +196,7 @@ function Profile() {
       );
 
       setUser(response.data.user);
+      window.dispatchEvent(new Event("womanProfileUpdated"));
       setIsEditing(false);
       setEditData({});
 

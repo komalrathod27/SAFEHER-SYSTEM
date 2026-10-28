@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import "../safeher-css/trustedcontacts.css";
 import Swal from "sweetalert2";
 import Axios from "axios";
@@ -28,8 +28,6 @@ function TrustedContacts() {
     const relationship = document.getElementById("relationship").value;
     const phoneNo = document.getElementById("phoneNo").value.trim();
     const email = document.getElementById("email").value.trim();
-    const priority = document.querySelector('input[name="priority"]:checked');
-
     const usersession = localStorage.getItem("mydata");
     if (!usersession) {
       Swal.fire({
@@ -87,23 +85,21 @@ function TrustedContacts() {
       return;
     }
 
-    // Email validation (optional but if provided must be valid)
-    if (email !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (email === "") {
       Swal.fire({
-        icon: "error",
-        title: "Invalid Email Address",
-        text: "Please enter a valid email address (e.g., example@gmail.com).",
+        icon: "warning",
+        title: "Email Required",
+        text: "Please enter the trusted contact's email address.",
         confirmButtonColor: "#2f80ed",
       });
       return;
     }
 
-    // Priority validation
-    if (!priority) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       Swal.fire({
-        icon: "warning",
-        title: "Oops!",
-        text: "Please select contact priority.",
+        icon: "error",
+        title: "Invalid Email Address",
+        text: "Please enter a valid email address (e.g., example@gmail.com).",
         confirmButtonColor: "#2f80ed",
       });
       return;
@@ -116,7 +112,6 @@ function TrustedContacts() {
       relationship: relationship,
       phoneNo: phoneNo,
       email: email,
-      priority: priority.value,
     })
 
       .then((response) => {
@@ -128,14 +123,6 @@ function TrustedContacts() {
         document.getElementById("relationship").value = "";
         document.getElementById("phoneNo").value = "";
         document.getElementById("email").value = "";
-
-        const priorityButtons = document.querySelectorAll(
-          'input[name="priority"]',
-        );
-
-        priorityButtons.forEach((button) => {
-          button.checked = false;
-        });
 
         Swal.fire({
           icon: "success",
@@ -251,48 +238,17 @@ function TrustedContacts() {
 
         <div>
           <label style="display: block; margin-bottom: 6px; font-weight: 600;">
-            Email Address (for Emergency SOS Alerts)
+            Email Address
           </label>
           <input
             id="editEmail"
             type="email"
             class="swal2-input"
-            placeholder="Enter email address"
+            placeholder="name@example.com"
             value="${contact.email || ""}"
+            required
             style="width: 100%; margin: 0; box-sizing: border-box;"
           />
-        </div>
-
-        <div>
-          <label style="display: block; margin-bottom: 8px; font-weight: 600;">
-            Priority
-          </label>
-
-          <div style="
-            display: flex;
-            gap: 30px;
-            align-items: center;
-          ">
-            <label style="display: flex; align-items: center; gap: 7px; cursor: pointer;">
-              <input
-                type="radio"
-                name="editPriority"
-                value="Primary"
-                ${contact.priority === "Primary" ? "checked" : ""}
-              />
-              Primary
-            </label>
-
-            <label style="display: flex; align-items: center; gap: 7px; cursor: pointer;">
-              <input
-                type="radio"
-                name="editPriority"
-                value="Secondary"
-                ${contact.priority === "Secondary" ? "checked" : ""}
-              />
-              Secondary
-            </label>
-          </div>
         </div>
 
       </div>
@@ -321,9 +277,10 @@ function TrustedContacts() {
 
         const email = document.getElementById("editEmail").value.trim();
 
-        const priority = document.querySelector(
-          'input[name="editPriority"]:checked',
-        );
+        if (!email) {
+          Swal.showValidationMessage("Please enter an email address.");
+          return false;
+        }
 
         if (!contactName) {
           Swal.showValidationMessage("Please enter contact name.");
@@ -347,15 +304,8 @@ function TrustedContacts() {
           return false;
         }
 
-        if (email !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          Swal.showValidationMessage(
-            "Please enter a valid email address.",
-          );
-          return false;
-        }
-
-        if (!priority) {
-          Swal.showValidationMessage("Please select contact priority.");
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          Swal.showValidationMessage("Please enter a valid email address.");
           return false;
         }
 
@@ -364,7 +314,6 @@ function TrustedContacts() {
           relationship,
           phoneNo,
           email,
-          priority: priority.value,
         };
       },
     }).then((result) => {
@@ -455,59 +404,24 @@ function TrustedContacts() {
               {contacts.length > 0 ? (
                 contacts.map((contact) => (
                   <div className="tc-contact-item" key={contact._id}>
-                    <div
-                      className={`tc-avatar ${
-                        contact.priority === "Primary"
-                          ? "tc-avatar-pink"
-                          : "tc-avatar-purple"
-                      }`}
-                    >
-                      👤
-                    </div>
+                    <div className="tc-avatar">👤</div>
 
                     <div className="tc-contact-info">
                       <h3>{contact.contactName}</h3>
                       <p>{contact.relationship}</p>
-                      <span className="tc-phone">📞 {contact.phoneNo}</span>
-                      {contact.email ? (
-                        <span
-                          className="tc-email"
-                          style={{
-                            display: "block",
-                            fontSize: "13px",
-                            color: "#475569",
-                            marginTop: "3px",
-                          }}
-                        >
-                          ✉️ {contact.email}
-                        </span>
-                      ) : (
-                        <span
-                          className="tc-no-email"
-                          style={{
-                            display: "block",
-                            fontSize: "12px",
-                            color: "#dc2626",
-                            marginTop: "3px",
-                            fontStyle: "italic",
-                          }}
-                        >
-                          ⚠️ No email (Click Edit to add for SOS emails)
-                        </span>
-                      )}
+                      <div className="tc-contact-methods">
+                        <span className="tc-phone">📞 {contact.phoneNo}</span>
+                        {contact.email ? (
+                          <span className="tc-email">✉️ {contact.email}</span>
+                        ) : (
+                          <span className="tc-no-email">
+                            ⚠️ No email (Click Edit to add for SOS emails)
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="tc-contact-right">
-                      <span
-                        className={
-                          contact.priority === "Primary"
-                            ? "tc-primary-badge"
-                            : "tc-secondary-badge"
-                        }
-                      >
-                        {contact.priority}
-                      </span>
-
                       <div className="tc-actions">
                         <button
                           type="button"
@@ -606,34 +520,14 @@ function TrustedContacts() {
 
               {/* EMAIL */}
               <div className="tc-form-group">
-                <label htmlFor="email">
-                  Email Address <span style={{ color: "#dc2626", fontSize: "12px" }}>* (For Emergency SOS Alerts)</span>
-                </label>
+                <label htmlFor="email">Email Address</label>
 
                 <input
                   type="email"
                   id="email"
-                  placeholder="Enter email address (e.g. member@gmail.com)"
+                  placeholder="name@example.com"
+                  required
                 />
-              </div>
-
-              {/* PRIORITY */}
-              <div className="tc-form-group">
-                <label>Contact Priority</label>
-
-                <div className="tc-priority-options">
-                  <label className="tc-priority-option">
-                    <input type="radio" name="priority" value="Primary" />
-
-                    <span>Primary</span>
-                  </label>
-
-                  <label className="tc-priority-option">
-                    <input type="radio" name="priority" value="Secondary" />
-
-                    <span>Secondary</span>
-                  </label>
-                </div>
               </div>
 
               {/* BUTTON */}
