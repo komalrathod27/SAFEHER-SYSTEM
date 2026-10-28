@@ -1,202 +1,154 @@
-import React from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { useLocation } from "react-router-dom";
 import "../safeher-css/header.css";
 
 function Header() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState("");
+  const location = useLocation();
+
+  const userSession = JSON.parse(localStorage.getItem("mydata") || "null");
+  const isLoggedIn = Boolean(userSession);
+  const currentPath = location.pathname.replace(/\/$/, "") || "/";
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProfilePhoto() {
+      if (!userSession?.user_id) {
+        return;
+      }
+
+      try {
+        const response = await axios.get(
+          `http://localhost:3000/api/getwomanuserdetails/${userSession.user_id}`,
+        );
+        if (isMounted) {
+          setProfilePhoto(response.data.profile_photo || "");
+        }
+      } catch (error) {
+        console.error("Header profile photo fetch error:", error);
+      }
+    }
+
+    loadProfilePhoto();
+    window.addEventListener("womanProfileUpdated", loadProfilePhoto);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("womanProfileUpdated", loadProfilePhoto);
+    };
+  }, [location.pathname, userSession?.user_id]);
+
   function logout() {
     localStorage.clear();
     window.location = "/";
   }
+
+  const guestLinks = [
+    { label: "Home", path: "/" },
+    { label: "About", path: "/about" },
+    { label: "Safety Map", path: "/safetymap" },
+    { label: "Safety Resources", path: "/safetyresources" },
+    { label: "How It Works", path: "/howitworks" },
+  ];
+
+  const userLinks = [
+    { label: "Home", path: "/" },
+    { label: "About", path: "/about" },
+    { label: "Trusted Contacts", path: "/trustedcontacts" },
+    { label: "Report Incident", path: "/reportincident" },
+    { label: "My Reports", path: "/myreports" },
+  ];
+
+  const links = isLoggedIn ? userLinks : guestLinks;
+
   return (
-    <div className="top_header_banner2 safeher-header">
-      {/* ================= TOP HEADER ================= */}
-      <section className="logo-contact">
-        <div className="container">
-          <div className="row">
-            {/* PHONE */}
-            <div className="col-lg-3 col-md-4 col-sm-6 col-xs-12">
-              <div className="single-top-contact">
-                <i className="ti-mobile"></i>
+    <header className="safeher-header">
+      <div className="safeher-header-inner">
+        {/* LOGO */}
+        <a href="/" className="safeher-header-logo" aria-label="SafeHer home">
+          <img src="/assets/images/all-img/SafeHer logo.png" alt="SafeHer" />
+        </a>
 
-                <h4>
-                  <a href="tel:+4857548546">+ 485 7548 8546</a>
-                </h4>
-              </div>
-            </div>
+        {/* MOBILE TOGGLE */}
+        <button
+          type="button"
+          className={`safeher-header-toggle ${menuOpen ? "is-open" : ""}`}
+          aria-label="Toggle menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
 
-            {/* EMAIL */}
-            <div className="col-lg-3 col-md-4 col-sm-6 col-xs-12">
-              <div className="single-top-contact">
-                <i className="ti-email"></i>
-
-                <h4>
-                  <a href="mailto:safeher@gmail.com">safeher@gmail.com</a>
-                </h4>
-              </div>
-            </div>
-
-            {/* SUPPORT */}
-            <div className="col-lg-3 col-md-4 col-sm-6 col-xs-12">
-              <div className="single-top-contact">
-                <i className="ti-alarm-clock"></i>
-
-                <h4>24/7 Safety Support</h4>
-              </div>
-            </div>
-
-            {/* SOCIAL ICONS */}
-            <div className="col-lg-3 col-md-4 col-sm-6 col-xs-12">
-              <div className="top_social_profile">
-                <ul>
-                  <li>
-                    <a href="#" className="top_f_facebook">
-                      <i className="fa-brands fa-facebook"></i>
+        {/* MENU + ACTIONS */}
+        <div className={`safeher-header-collapse ${menuOpen ? "is-open" : ""}`}>
+          <nav className="safeher-header-nav" aria-label="Main menu">
+            <ul>
+              {links.map((link) => {
+                const isActive = currentPath === link.path;
+                return (
+                  <li key={link.label}>
+                    <a
+                      href={link.path}
+                      className={isActive ? "active" : ""}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      {link.label}
                     </a>
                   </li>
+                );
+              })}
+            </ul>
+          </nav>
 
-                  <li>
-                    <a href="#" className="top_f_twitter">
-                      <i className="fa-brands fa-x-twitter"></i>
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="#" className="top_f_instagram">
-                      <i className="fa-brands fa-instagram"></i>
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="#" className="top_f_linkedin">
-                      <i className="fa-brands fa-linkedin-in"></i>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ================= NAVIGATION ================= */}
-      <div id="navigation" className="navbar-light bg-faded site-navigation">
-        <div className="container">
-          <div className="row align-items-center">
-            {/* ================= LOGO ================= */}
-            <div className="col-lg-3 col-md-3">
-              <div className="site-logo">
-                <a href="/">
-                  <img
-                    src="assets/images/all-img/SafeHer logo.png"
-                    alt="SafeHer"
-                  />
-                </a>
-              </div>
-            </div>
-
-            {/* ================= MENU ================= */}
-            <div className="col-lg-6 col-md-6">
-              <nav id="main-menu">
-                <ul>
-                  {localStorage.getItem("mydata") === null ? (
-                    <>
-                      <li>
-                        <a href="/">Home</a>
-                      </li>
-
-                      <li>
-                        <a href="/about">About</a>
-                      </li>
-
-                      <li>
-                        <a href="/safetymap">Safety Map</a>
-                      </li>
-
-                      <li>
-                        <a href="/safetyresources">Safety Resources</a>
-                      </li>
-
-                      <li>
-                        <a href="/howitworks">How It Works</a>
-                      </li>
-                    </>
+          <div className="safeher-header-actions">
+            {!isLoggedIn ? (
+              <a className="safeher-header-register" href="/register">
+                Register Now
+                <i className="fa-solid fa-arrow-right"></i>
+              </a>
+            ) : (
+              <div className="safeher-header-profile">
+                <button type="button" className="safeher-header-profile-btn">
+                  {profilePhoto ? (
+                    <img
+                      className="safeher-header-avatar"
+                      src={
+                        profilePhoto.startsWith("http")
+                          ? profilePhoto
+                          : `http://localhost:3000/public/${encodeURIComponent(profilePhoto)}`
+                      }
+                      alt=""
+                    />
                   ) : (
-                    <>
-                      <li>
-                        <a href="/">Home</a>
-                      </li>
-
-                      <li>
-                        <a href="/about">About</a>
-                      </li>
-
-                      <li>
-                        <a href="/trustedcontacts">Trusted Contacts</a>
-                      </li>
-
-                      <li>
-                        <a href="/reportincident">Report Incident</a>
-                      </li>
-
-                      <li>
-                        <a href="/myreports">My Reports</a>
-                      </li>
-                    </>
+                    <i className="fa-regular fa-circle-user"></i>
                   )}
-                </ul>
-              </nav>
-            </div>
+                  <span>My Profile</span>
+                  <i className="fa-solid fa-chevron-down safeher-header-arrow"></i>
+                </button>
 
-            {/* ================= RIGHT SIDE ================= */}
-            <div className="col-lg-3 col-md-3">
-              <div
-                className="header-right"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  justifyContent: "flex-end",
-                }}
-              >
-                {localStorage.getItem("mydata") === null ? (
-                  <div className="call_to_action">
-                    <a className="btn_two" href="/register">
-                      Register Now
-                      <i className="fa-solid fa-arrow-right"></i>
-                    </a>
-                  </div>
-                ) : (
-                  <>
-                    {/* PROFILE DROPDOWN */}
-                    <div className="profile-dropdown">
-                      <button className="profile-button">
-                        <i className="fa-regular fa-circle-user"></i>
+                <div className="safeher-header-profile-menu">
+                  <a href="/profile">
+                    <i className="fa-regular fa-user"></i>
+                    My Profile
+                  </a>
 
-                        <span>My Profile</span>
-
-                        <i className="fa-solid fa-chevron-down dropdown-arrow"></i>
-                      </button>
-
-                      {/* DROPDOWN MENU */}
-                      <div className="profile-menu">
-                        <a href="/profile">
-                          <i className="fa-regular fa-user"></i>
-                          My Profile
-                        </a>
-
-                        <a href="#" onClick={logout}>
-                          <i className="fa-solid fa-right-from-bracket"></i>
-                          Logout
-                        </a>
-                      </div>
-                    </div>
-                  </>
-                )}
+                  <a href="#" onClick={logout}>
+                    <i className="fa-solid fa-right-from-bracket"></i>
+                    Logout
+                  </a>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
-    </div>
+    </header>
   );
 }
 

@@ -159,8 +159,7 @@ const trustedContact = new mongoose.model(
     contactName: String,
     relationship: String,
     phoneNo: String,
-    email: { type: String, default: "" },
-    priority: String,
+    email: { type: String, required: true },
   }),
 );
 
@@ -1000,9 +999,17 @@ app.post("/api/womanlogin", async (req, res) => {
 //Trusted Contact API
 app.post("/api/addTrustedContact", async (req, res) => {
   try {
-    const { womanId, contactName, relationship, phoneNo, email, priority } = req.body;
+    const { womanId, contactName, relationship, phoneNo, email } = req.body;
+    const normalizedEmail =
+      typeof email === "string" ? email.trim().toLowerCase() : "";
 
-    if (!womanId || !contactName || !relationship || !phoneNo || !priority) {
+    if (
+      !womanId ||
+      !contactName ||
+      !relationship ||
+      !phoneNo ||
+      !normalizedEmail
+    ) {
       return res.status(400).json({
         message: "All trusted contact fields are required.",
       });
@@ -1014,7 +1021,7 @@ app.post("/api/addTrustedContact", async (req, res) => {
       });
     }
 
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return res.status(400).json({
         message: "Please enter a valid email address.",
       });
@@ -1036,8 +1043,7 @@ app.post("/api/addTrustedContact", async (req, res) => {
       contactName: contactName.trim(),
       relationship: relationship,
       phoneNo: phoneNo,
-      email: email ? email.trim().toLowerCase() : "",
-      priority: priority,
+      email: normalizedEmail,
     });
 
     res.status(201).json({
@@ -1056,9 +1062,7 @@ app.post("/api/addTrustedContact", async (req, res) => {
 app.get("/api/getTrustedContacts/:womanId", async (req, res) => {
   try {
     const { womanId } = req.params;
-    const contacts = await trustedContact
-      .find({ womanId: womanId })
-      .sort({ priority: 1 });
+    const contacts = await trustedContact.find({ womanId: womanId });
     res.status(200).json(contacts);
   } catch (error) {
     console.log(error);
@@ -1094,10 +1098,12 @@ app.delete("/api/deleteTrustedContact/:_id", async (req, res) => {
 app.put("/api/editTrustedContact/:_id", async (req, res) => {
   try {
     const { _id } = req.params;
-    const { contactName, relationship, phoneNo, email, priority } = req.body;
+    const { contactName, relationship, phoneNo, email } = req.body;
+    const normalizedEmail =
+      typeof email === "string" ? email.trim().toLowerCase() : "";
 
     // Validation
-    if (!contactName || !relationship || !phoneNo || !priority) {
+    if (!contactName || !relationship || !phoneNo || !normalizedEmail) {
       return res.status(400).json({
         message: "All fields are required.",
       });
@@ -1110,7 +1116,7 @@ app.put("/api/editTrustedContact/:_id", async (req, res) => {
       });
     }
 
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return res.status(400).json({
         message: "Please enter a valid email address.",
       });
@@ -1141,10 +1147,7 @@ app.put("/api/editTrustedContact/:_id", async (req, res) => {
     contact.contactName = contactName.trim();
     contact.relationship = relationship;
     contact.phoneNo = phoneNo;
-    if (email !== undefined) {
-      contact.email = email ? email.trim().toLowerCase() : "";
-    }
-    contact.priority = priority;
+    contact.email = normalizedEmail;
 
     await contact.save();
     res.status(200).json({

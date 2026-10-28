@@ -249,27 +249,13 @@
 
   border-radius: 50%;
 
-  font-size: 23px;
-}
-
-.tc-avatar-pink {
-  background: #fff0f5;
-}
-
-.tc-avatar-blue {
   background: #edf5ff;
-}
-
-.tc-avatar-purple {
-  background: #f2efff;
-}
-
-.tc-avatar-green {
-  background: #ecfdf3;
+  font-size: 23px;
 }
 
 .tc-contact-info {
   flex: 1;
+  min-width: 0;
 }
 
 .tc-contact-info h3 {
@@ -296,45 +282,28 @@
   font-weight: 500;
 }
 
+.tc-contact-methods {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
 .tc-email {
   color: #2563eb !important;
   font-size: 12.5px;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .tc-no-email {
   color: #e11d48 !important;
   font-size: 11.5px;
+  overflow-wrap: anywhere;
 }
 
 .tc-contact-right {
   text-align: right;
 }
-
-.tc-primary-badge,
-.tc-secondary-badge {
-  display: inline-block;
-
-  padding: 5px 9px;
-
-  margin-bottom: 7px;
-
-  border-radius: 15px;
-
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.tc-primary-badge {
-  background: #edf5ff;
-  color: #2f80ed;
-}
-
-.tc-secondary-badge {
-  background: #fff0f5;
-  color: #e05287;
-}
-
 
 /* =========================================================
    ACTION BUTTONS
@@ -448,6 +417,7 @@
 
 .tc-form-group input[type="text"],
 .tc-form-group input[type="tel"],
+.tc-form-group input[type="email"],
 .tc-form-group select {
   width: 100%;
 
@@ -479,46 +449,6 @@
   border-color: #2f80ed;
 
   box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.09);
-}
-
-
-/* =========================================================
-   PRIORITY
-   ========================================================= */
-
-.tc-priority-options {
-  display: flex;
-  gap: 10px;
-}
-
-.tc-priority-option {
-  flex: 1;
-
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  padding: 11px 12px;
-
-  border: 1px solid #e1e6ee;
-  border-radius: 9px;
-
-  cursor: pointer;
-
-  color: #475569;
-
-  font-size: 12px;
-
-  transition: 0.2s;
-}
-
-.tc-priority-option:hover {
-  border-color: #2f80ed;
-  background: #f8fbff;
-}
-
-.tc-priority-option input {
-  accent-color: #2f80ed;
 }
 
 
@@ -684,14 +614,6 @@
 
   .tc-contact-count {
     display: none;
-  }
-
-  .tc-priority-options {
-    flex-direction: column;
-  }
-
-  .tc-priority-option {
-    flex: auto;
   }
 
   .tc-footnote {
