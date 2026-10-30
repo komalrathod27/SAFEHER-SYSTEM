@@ -202,15 +202,6 @@ function AdminLogin() {
           font-size: 13px;
         }
 
-        .admin-remember {
-          color: #718096;
-        }
-
-        .admin-remember input {
-          margin-right: 6px;
-          accent-color: #2f80ed;
-        }
-
         .admin-link {
           color: #2f80ed;
           text-decoration: none;
@@ -341,18 +332,6 @@ function AdminLogin() {
               className="admin-input"
               placeholder="Enter your password"
             />
-          </div>
-
-          {/* Remember / Forgot */}
-          <div className="admin-options">
-            <label className="admin-remember">
-              <input type="checkbox" />
-              Remember me
-            </label>
-
-            <a href="/forgot-password" className="admin-link">
-              Forgot password?
-            </a>
           </div>
 
           {/* Login */}

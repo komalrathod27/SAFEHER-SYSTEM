@@ -64,27 +64,6 @@ function TrustedContacts() {
       return;
     }
 
-    // Phone validation
-    if (phoneNo === "") {
-      Swal.fire({
-        icon: "warning",
-        title: "Oops!",
-        text: "Please enter phone number.",
-        confirmButtonColor: "#2f80ed",
-      });
-      return;
-    }
-
-    if (!/^[0-9]{10}$/.test(phoneNo)) {
-      Swal.fire({
-        icon: "error",
-        title: "Invalid Phone Number",
-        text: "Phone number must contain exactly 10 digits.",
-        confirmButtonColor: "#2f80ed",
-      });
-      return;
-    }
-
     if (email === "") {
       Swal.fire({
         icon: "warning",
@@ -224,14 +203,13 @@ function TrustedContacts() {
 
         <div>
           <label style="display: block; margin-bottom: 6px; font-weight: 600;">
-            Phone Number
+            Phone Number (optional)
           </label>
           <input
             id="editPhoneNo"
             class="swal2-input"
-            placeholder="Enter 10 digit phone number"
+            placeholder="Enter phone number (optional)"
             value="${contact.phoneNo}"
-            maxlength="10"
             style="width: 100%; margin: 0; box-sizing: border-box;"
           />
         </div>
@@ -289,18 +267,6 @@ function TrustedContacts() {
 
         if (!relationship) {
           Swal.showValidationMessage("Please select relationship.");
-          return false;
-        }
-
-        if (!phoneNo) {
-          Swal.showValidationMessage("Please enter phone number.");
-          return false;
-        }
-
-        if (!/^[0-9]{10}$/.test(phoneNo)) {
-          Swal.showValidationMessage(
-            "Phone number must contain exactly 10 digits.",
-          );
           return false;
         }
 
@@ -410,7 +376,9 @@ function TrustedContacts() {
                       <h3>{contact.contactName}</h3>
                       <p>{contact.relationship}</p>
                       <div className="tc-contact-methods">
-                        <span className="tc-phone">📞 {contact.phoneNo}</span>
+                        {contact.phoneNo && (
+                          <span className="tc-phone">📞 {contact.phoneNo}</span>
+                        )}
                         {contact.email ? (
                           <span className="tc-email">✉️ {contact.email}</span>
                         ) : (
@@ -508,13 +476,12 @@ function TrustedContacts() {
 
               {/* PHONE */}
               <div className="tc-form-group">
-                <label htmlFor="phoneNo">Phone Number</label>
+                <label htmlFor="phoneNo">Phone Number (optional)</label>
 
                 <input
                   type="tel"
                   id="phoneNo"
-                  placeholder="Enter 10 digit phone number"
-                  maxLength="10"
+                  placeholder="Enter phone number (optional)"
                 />
               </div>
 
