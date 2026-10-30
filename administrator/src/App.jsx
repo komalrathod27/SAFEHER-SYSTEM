@@ -18,6 +18,9 @@ import AdminSOSHistory from "./pages/adminsoshistory";
 import AdminReports from "./pages/adminreports";
 import SafetyMapManagement from "./pages/safetymapmanage";
 import SafetyArticles from "./pages/safetyarticles";
+import UserReports from "./pages/userreports.";
+import WomenReport from "./pages/womenreport.jsx";
+import VolunteerReport from "./pages/volunteerreport.jsx";
 import AdminLogin from "./pages/adminlogin";
 
 function Layout() {
@@ -45,6 +48,9 @@ function Layout() {
             <Route path="/adminreports" element={<AdminReports />} />
             <Route path="/safetymapmanage" element={<SafetyMapManagement />} />
             <Route path="/safetyarticles" element={<SafetyArticles />} />
+            <Route path="/userreports" element={<UserReports />} />
+            <Route path="/womenreport/:id" element={<WomenReport />} />
+            <Route path="/volunteerreport/:id" element={<VolunteerReport />} />
           </Routes>
 
           <Footer />

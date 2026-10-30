@@ -1561,7 +1561,7 @@
 
 // export default SOSTracking;
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Axios from "axios";
 import Swal from "sweetalert2";
 import { io } from "socket.io-client";
@@ -2157,25 +2157,15 @@ function SOSTracking() {
             emergencyType: "Emergency SOS - Immediate Help Needed",
           });
 
-          const smsStatus = res.data.smsStatus;
           setActiveSos(res.data.sos);
           localStorage.setItem("activeSosId", res.data.sos._id);
 
-          if (smsStatus && !smsStatus.success) {
-            Swal.fire({
-              icon: "warning",
-              title: "SMS not delivered",
-              text: `${smsStatus.message} Call emergency helpline 112 directly if you need immediate help.`,
-              confirmButtonColor: "#dc2626",
-            });
-          } else {
-            Swal.fire({
-              icon: "success",
-              title: "SOS Alert Broadcasted!",
-              text: `Your live location (${loc.address}) has been shared with volunteers and trusted contacts. Help is on the way.`,
-              confirmButtonColor: "#2563eb",
-            });
-          }
+          Swal.fire({
+            icon: "success",
+            title: "SOS Alert Broadcasted!",
+            text: `Your live location (${loc.address}) has been shared with volunteers and trusted contacts. Help is on the way.`,
+            confirmButtonColor: "#2563eb",
+          });
         } catch (err) {
           Swal.fire({
             icon: "error",

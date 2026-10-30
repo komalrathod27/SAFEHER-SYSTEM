@@ -71,20 +71,6 @@ export const activateSOSAlert = () => {
       })
         .then((resp) => {
           localStorage.setItem("activeSosId", resp.data.sos._id);
-          const smsStatus = resp.data.smsStatus;
-
-          if (smsStatus && !smsStatus.success) {
-            Swal.fire({
-              icon: "warning",
-              title: "SMS not delivered",
-              text: `${smsStatus.message} Call emergency helpline 112 directly if you need immediate help.`,
-              confirmButtonColor: "#dc2626",
-              confirmButtonText: "Open Tracking Map",
-            }).then(() => {
-              window.location.href = "/sostracking";
-            });
-            return;
-          }
 
           Swal.fire({
             icon: "success",

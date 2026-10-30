@@ -129,6 +129,12 @@ function Sidebar() {
               <span className="menu-title">Safety Articles</span>
             </a>
           </li>
+          <li className="nav-item">
+            <a className="nav-link" href="/userreports">
+              <i className="fas fa-book-open menu-icon"></i>
+              <span className="menu-title">User Reports</span>
+            </a>
+          </li>
         </ul>
       </nav>
     </>
