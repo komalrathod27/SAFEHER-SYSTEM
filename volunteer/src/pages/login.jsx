@@ -387,7 +387,7 @@ function VolunteerLogin() {
             Remember me
           </label>
 
-          <a href="/forgot-password" className="vol-link">
+          <a href="/forgotpassword" className="vol-link">
             Forgot password?
           </a>
         </div>

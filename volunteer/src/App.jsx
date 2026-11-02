@@ -19,16 +19,30 @@ import TrustScore from "./pages/trustscore";
 import Badges from "./pages/badges";
 import Dashboard from "./pages/dashboard";
 import EmergencyAlertBanner from "./components/EmergencyAlertBanner";
+import ForgotPassword from "./pages/forgotpassword";
+import VerifyOTP from "./pages/verifyotp";
+import ResetPassword from "./pages/resetpassword";
 
 function Layout() {
   const Location = useLocation();
+  const authPages = [
+    "/",
+    "/register",
+    "/forgotpassword",
+    "/verifyotp",
+    "/resetpassword",
+  ];
 
-  if (location.pathname === "/") {
-    return <Login />;
-  }
-
-  if (location.pathname === "/register") {
-    return <Register />;
+  if (authPages.includes(Location.pathname)) {
+    return (
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgotpassword" element={<ForgotPassword />} />
+        <Route path="/verifyotp" element={<VerifyOTP />} />
+        <Route path="/resetpassword" element={<ResetPassword />} />
+      </Routes>
+    );
   }
 
   const toggleSidebar = () => {

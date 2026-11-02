@@ -20,6 +20,8 @@ import ReportIncident from "./pages/reportincident.jsx";
 import MyReports from "./pages/myreports.jsx";
 import SOSTracking from "./pages/sostracking.jsx";
 import ForgotPassword from "./pages/forgotpassword.jsx";
+import VerifyOTP from "./pages/verifyotp.jsx";
+import ResetPassword from "./pages/resetpassword.jsx";
 
 function WomanActivityTracker() {
   const location = useLocation();
@@ -91,6 +93,8 @@ function App() {
         <Route path="/myreports" element={<MyReports />} />
         <Route path="/sostracking" element={<SOSTracking />} />
         <Route path="/forgotpassword" element={<ForgotPassword />} />
+        <Route path="/verifyotp" element={<VerifyOTP />} />
+        <Route path="/resetpassword" element={<ResetPassword />} />
       </Routes>
       <Footer />
     </Router>
