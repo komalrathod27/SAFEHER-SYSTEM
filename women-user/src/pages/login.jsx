@@ -112,9 +112,9 @@ function Login() {
           min-height: calc(100vh - 88px);
           min-height: calc(100svh - 88px);
           display: flex;
-          align-items: center;
+          align-items: safe center;
           justify-content: center;
-          padding: 38px 20px;
+          padding: 20px;
           background:
             radial-gradient(circle at 12% 15%, rgba(40, 125, 245, 0.10), transparent 31%),
             radial-gradient(circle at 88% 85%, rgba(233, 75, 155, 0.10), transparent 32%),
@@ -305,11 +305,6 @@ function Login() {
           }
         }
 
-        @media (max-height: 700px) {
-          .woman-login-page {
-            align-items: flex-start;
-          }
-        }
       `}</style>
 
       <section className="woman-login-card" aria-labelledby="woman-login-title">

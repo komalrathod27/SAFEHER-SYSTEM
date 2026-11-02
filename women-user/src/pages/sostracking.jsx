@@ -1602,7 +1602,6 @@ function computeDistance(lat1, lon1, lat2, lon2) {
 function SOSTracking() {
   const [user, setUser] = useState(null);
   const [activeSos, setActiveSos] = useState(null);
-  const [volunteerProfile, setVolunteerProfile] = useState(null);
   const [volunteerTrustScore, setVolunteerTrustScore] = useState(null);
   const [volunteerBadges, setVolunteerBadges] = useState([]);
   const [showVolunteerDetails, setShowVolunteerDetails] = useState(false);
@@ -1899,37 +1898,6 @@ function SOSTracking() {
       setDistanceText("");
     }
   }, [activeSos]);
-
-  //Fetch Volunteer Profile
-  useEffect(() => {
-    const volunteerId = activeSos?.volunteerId;
-    if (!volunteerId) {
-      setVolunteerProfile(null);
-      return;
-    }
-    let cancelled = false;
-    const fetchVolunteerProfile = async () => {
-      try {
-        const response = await Axios.get(
-          `http://localhost:3000/api/getvolunteerdetails/${volunteerId}`,
-        );
-
-        if (!cancelled) {
-          setVolunteerProfile(response.data);
-          console.log("Volunteer Profile:", response.data);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setVolunteerProfile(null);
-          console.error("Error fetching volunteer profile:", error);
-        }
-      }
-    };
-    fetchVolunteerProfile();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeSos?.volunteerId]);
 
   //Fetch trust score and badges
   useEffect(() => {
@@ -3092,7 +3060,6 @@ function SOSTracking() {
                                 </div>
                               ))}
                             </div>
-
                             <div
                               style={{
                                 marginTop: "18px",

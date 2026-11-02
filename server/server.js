@@ -1319,14 +1319,14 @@ app.post("/api/volunteerlogin", async (req, res) => {
 
 //Get volunteer data into admin
 app.get("/api/getvolunteer", async (req, res) => {
-  res.json(await volunteer.find());
+  res.json(await volunteer.find().select("-password"));
 });
 
 //get volunteer data using particular id
 app.get("/api/getvolunteerdetails/:_id", async (req, res) => {
   try {
     const _id = req.params._id;
-    const data = await volunteer.findById(_id);
+    const data = await volunteer.findById(_id).select("-password");
     if (!data) {
       return res.status(404).json({
         message: "Volunteer not found",
