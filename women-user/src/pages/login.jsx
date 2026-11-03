@@ -38,17 +38,6 @@ function Login() {
       });
       return;
     }
-
-    if (password.length !== 6) {
-      Swal.fire({
-        icon: "error",
-        title: "Invalid Password",
-        text: "Password must be exactly 6 characters long.",
-        confirmButtonColor: "#287df5",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {

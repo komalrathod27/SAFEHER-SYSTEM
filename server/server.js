@@ -7,6 +7,7 @@ const cors = require("cors"); //cors is used to allow cross-origin requests betw
 const bodyParser = require("body-parser"); //body-parser is used to parse(read) the body data.
 const googleMailService = require("./services/googleMailService");
 const app = express(); //one express app is created to handle the requests and responses.
+const bcrypt = require("bcrypt"); //bcrypt is used to hash the password before storing it in the database.
 const server = http.createServer(app);
 
 // Initialize Socket.io with fallback
@@ -126,7 +127,6 @@ const incidentStorage = multer.diskStorage({
 const incidentUpload = multer({ storage: incidentStorage });
 
 //SCHEMAS//
-
 //Woman user registration schema
 const womanUser = new mongoose.model(
   "womanUser",
@@ -992,10 +992,11 @@ app.post("/api/womanregister", multi, async (req, res) => {
     return res.status(400).json({ message: "Email already exists" });
   }
   const registeredAt = new Date();
+  const hashedPassword = await bcrypt.hash(req.body.password, 12);
   await womanUser.create({
     fullName: req.body.fullName,
-    email: req.body.email,
-    password: req.body.password,
+    email: req.body.email.trim().toLowerCase(),
+    password: hashedPassword,
     phoneNumber: req.body.phoneNumber,
     gender: req.body.gender,
     dob: req.body.dob,
@@ -1015,27 +1016,44 @@ app.post("/api/womanregister", multi, async (req, res) => {
 
 //Login API for woman user //
 app.post("/api/womanlogin", async (req, res) => {
-  const { identifier, password } = req.body; //ye line frontend se aayi hui data ko destructure kar rahi hai. identifier me username/email aur password me password aayega.
-  if (!identifier || !password) {
-    //agar identifier ya password empty hai to error response send kar raha hai.
-    return res.status(400).send({
-      message: "Email and password are required.",
-    });
-  }
-  const user = await womanUser.findOne({
-    email: identifier,
-    password: password,
-  }); //ye line mongodb me check kar rahi hai ki email aur password match karta hai ya nahi. agar match karta hai to user variable me user ka data aa jayega, otherwise null aa jayega.
+  try {
+    const { identifier, password } = req.body; //ye line frontend se aayi hui data ko destructure kar rahi hai. identifier me username/email aur password me password aayega.
+    if (!identifier || !password) {
+      //agar identifier ya password empty hai to error response send kar raha hai.
+      return res.status(400).send({
+        message: "Email and password are required.",
+      });
+    }
+    const user = await womanUser.findOne({
+      email: identifier.trim().toLowerCase(),
+    }); //ye line mongodb me check kar rahi hai ki email aur password match karta hai ya nahi. agar match karta hai to user variable me user ka data aa jayega, otherwise null aa jayega.
 
-  if (user) {
+    if (!user) {
+      return res.status(400).send({
+        message: "Invalid email or password.",
+      });
+    }
+
+    //verfiy bcrypt hashed password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        message: "Invalid email or password.",
+      });
+    }
     user.status = "Active";
     user.lastActiveAt = new Date();
     await user.save();
-    return res.status(200).send(user); //agar user exist karta hai to success response send kar raha hai. ye response frontend me show hoga.
-  } else {
-    return res.status(400).send({
-      message: "Invalid email or password.",
-    }); //agar user exist nahi karta hai to error response send kar raha hai. ye response frontend me show hoga.
+
+    //remove password before sending response
+    const safeUser = user.toObject();
+    delete safeUser.password;
+    return res.status(200).json(safeUser);
+  } catch (error) {
+    console.error("Error during woman user login:", error);
+    return res.status(500).json({
+      message: "Something went wrong during login. Please try again later.",
+    });
   }
 });
 
@@ -1235,34 +1253,45 @@ app.put("/api/editTrustedContact/:_id", async (req, res) => {
 
 //Registration API for Volunteer
 app.post("/api/volunteerregister", multi1, async (req, res) => {
-  const image = req.files?.profilePhoto?.[0]?.filename;
-  const image1 = req.files?.idProof?.[0]?.filename;
-  const exists = await volunteer.findOne({ email: req.body.email });
-  if (exists) {
-    return res.status(400).json({ message: "Email already exists" });
+  try {
+    const image = req.files?.profilePhoto?.[0]?.filename;
+    const image1 = req.files?.idProof?.[0]?.filename;
+    const exists = await volunteer.findOne({ email: req.body.email });
+    if (exists) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    //Hash volunteer password
+    const hashedPassword = await bcrypt.hash(req.body.password, 12);
+    await volunteer.create({
+      name: req.body.name,
+      email: req.body.email,
+      password: hashedPassword,
+      createdAt: new Date(),
+      contact_no: req.body.contact_no,
+      gender: req.body.gender,
+      dob: req.body.dob,
+      city: req.body.city,
+      state: req.body.state,
+      pincode: req.body.pincode,
+      address: req.body.address,
+      profile_photo: image,
+      qualification: req.body.qualification,
+      serviceArea: req.body.serviceArea,
+      proof_type: req.body.proof_type,
+      proof: image1,
+      reason: req.body.reason,
+    });
+    res.json({
+      message: "Your volunteer application has been submitted successfully.",
+    });
+  } catch (error) {
+    console.log("Volunteer Registration Error:", error);
+    res.status(500).json({
+      message:
+        "Something went wrong during registration. Please try again later.",
+    });
   }
-  await volunteer.create({
-    name: req.body.name,
-    email: req.body.email,
-    password: req.body.password,
-    createdAt: new Date(),
-    contact_no: req.body.contact_no,
-    gender: req.body.gender,
-    dob: req.body.dob,
-    city: req.body.city,
-    state: req.body.state,
-    pincode: req.body.pincode,
-    address: req.body.address,
-    profile_photo: image,
-    qualification: req.body.qualification,
-    serviceArea: req.body.serviceArea,
-    proof_type: req.body.proof_type,
-    proof: image1,
-    reason: req.body.reason,
-  });
-  res.json({
-    message: "Your volunteer application has been submitted successfully.",
-  });
 });
 
 //Login API for Volunteer
@@ -1274,11 +1303,10 @@ app.post("/api/volunteerlogin", async (req, res) => {
     });
   }
   const user = await volunteer.findOne({
-    email: email,
-    password: password,
+    email: email.trim().toLowerCase(),
   });
 
-  if (!user) {
+  if (!user || !(await bcrypt.compare(password, user.password))) {
     return res.status(400).send({
       status: "Invalid",
       message: "Invalid email or Password.",
@@ -1580,47 +1608,53 @@ app.put(
   },
 );
 
-// Update Volunteer password API
+// Update Volunteer password API for My profile page
 app.put("/api/updatevolunteerpassword/:user_id", async (req, res) => {
   const { user_id } = req.params;
-  const { password } = req.body;
-  if (!password) {
-    return res.status(400).send({
+  const { currentPassword, password } = req.body;
+  if (!currentPassword || !password) {
+    return res.status(400).json({
       status: "Invalid",
-      message: "New password is required",
+      message: "Current password and new password are required",
     });
   }
   if (password.length < 6) {
-    return res.status(400).send({
+    return res.status(400).json({
       status: "Invalid",
-      message: "Password must be at least 6 characters long",
+      message: " New Password must be at least 6 characters long",
     });
   }
 
   try {
-    const updatedVolunteer = await volunteer.findByIdAndUpdate(
-      user_id,
-      {
-        password: password,
-      },
-      {
-        returnDocument: "after",
-        runValidators: true,
-      },
-    );
-    if (!updatedVolunteer) {
-      return res.status(404).send({
+    const existingUser = await volunteer.findById(user_id);
+    if (!existingUser) {
+      return res.status(404).json({
         status: "Invalid",
         message: "Volunteer not found",
       });
     }
-    res.status(200).send({
+
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      existingUser.password,
+    );
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        status: "Invalid",
+        message: "Current password is incorrect",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    existingUser.password = hashedPassword;
+    await existingUser.save();
+    res.status(200).json({
       status: "Success",
       message: "Password updated successfully",
     });
   } catch (error) {
     console.log("Volunteer Password Update Error:", error);
-    res.status(500).send({
+    res.status(500).json({
       status: "Error",
       message: "Unable to update password",
     });
@@ -2028,7 +2062,7 @@ app.put(
   },
 );
 
-//change women password API
+//change women password API for My profile page
 app.put("/api/changewomanpassword/:_id", async (req, res) => {
   try {
     const _id = req.params._id;
@@ -2056,28 +2090,33 @@ app.put("/api/changewomanpassword/:_id", async (req, res) => {
       });
     }
 
-    // Check current password
-    if (user.password !== currentPassword) {
+    //Verify current bcrypt hashed password
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
+    if (!isPasswordValid) {
       return res.status(400).json({
         message: "Current password is incorrect.",
       });
     }
 
-    // Check new password is different
-    if (currentPassword === newPassword) {
+    //Check wheather new password is same as current password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
       return res.status(400).json({
         message: "New password must be different from current password.",
       });
     }
 
-    // Update password
-    user.password = newPassword;
+    // Hash and update new password
+    user.password = await bcrypt.hash(newPassword, 12);
     await user.save();
-    res.status(200).json({
+    return res.status(200).json({
       message: "Password changed successfully.",
     });
   } catch (error) {
-    console.log("Change password error:", error);
+    console.error("Change password error:", error);
     res.status(500).json({
       message: "Server error.",
     });

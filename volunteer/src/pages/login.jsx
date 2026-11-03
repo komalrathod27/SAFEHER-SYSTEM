@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import Swal from "sweetalert2";
 import Axios from "axios";
 
 function VolunteerLogin() {
-  const handleLogin = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (isLoading) return;
     const email = document.getElementById("vol-email").value.trim();
     const password = document.getElementById("vol-password").value.trim();
 
@@ -41,17 +44,8 @@ function VolunteerLogin() {
       return;
     }
 
-    if (password.length !== 6) {
-      Swal.fire({
-        icon: "warning",
-        title: "Invalid Password",
-        text: "Password must be exactly 6 characters.",
-        confirmButtonColor: "#287df5",
-      });
-      return;
-    }
-
     // Login API
+    setIsLoading(true);
     Axios.post("http://localhost:3000/api/volunteerlogin", {
       email: email,
       password: password,
@@ -113,6 +107,9 @@ function VolunteerLogin() {
             confirmButtonColor: "#287df5",
           });
         }
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
   };
 
@@ -275,6 +272,12 @@ function VolunteerLogin() {
           transition: 0.25s;
         }
 
+        .vol-login-btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+          transform: none;
+        }
+
         .vol-login-btn:hover {
           transform: translateY(-2px);
           box-shadow: 0 12px 26px rgba(22,160,133,0.28);
@@ -336,7 +339,7 @@ function VolunteerLogin() {
         }
       `}</style>
 
-      <div className="vol-card">
+      <form className="vol-card" onSubmit={handleLogin}>
         {/* SafeHer Volunteer Logo */}
         <a href="/" className="vol-brand">
           <img src="/images/icon/volunteer-logo.png" alt="Safeher" />
@@ -393,8 +396,8 @@ function VolunteerLogin() {
         </div>
 
         {/* Login */}
-        <button type="button" className="vol-login-btn" onClick={handleLogin}>
-          Sign In as Volunteer
+        <button type="submit" className="vol-login-btn" disabled={isLoading}>
+          {isLoading ? "Signing In..." : "Sign In as Volunteer"}
         </button>
 
         <div className="vol-divider">NEW TO SAFEHER?</div>
@@ -403,7 +406,7 @@ function VolunteerLogin() {
         <p className="vol-register">
           Want to help our community? <a href="/register">Apply as Volunteer</a>
         </p>
-      </div>
+      </form>
     </div>
   );
 }
