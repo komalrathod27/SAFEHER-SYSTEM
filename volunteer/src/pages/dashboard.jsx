@@ -240,7 +240,7 @@ function Dashboard() {
     {
       title: "Incident reports",
       value: errors.incidents ? "—" : incidents.length,
-      detail: "Reports you have filed",
+      detail: "Reports women have filed",
       icon: FileWarning,
       tone: "rose",
       path: routes.incidents,

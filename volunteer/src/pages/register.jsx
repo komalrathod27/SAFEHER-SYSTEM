@@ -1,23 +1,64 @@
-import React from "react";
+import React, { useState } from "react";
 import Swal from "sweetalert2";
 import Axios from "axios";
+import { indianStates, cityList, serviceAreaMap } from "../data/locationdata";
 
 function Register() {
-  const handleSubmit = () => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordValue, setPasswordValue] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [otherCity, setOtherCity] = useState("");
+  const [selectedState, setSelectedState] = useState("");
+  const [otherState, setOtherState] = useState("");
+  const [selectedQualification, setSelectedQualification] = useState("");
+  const [otherQualification, setOtherQualification] = useState("");
+  const [selectedServiceArea, setSelectedServiceArea] = useState("");
+  const [otherServiceArea, setOtherServiceArea] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const qualificationOptions = [
+    "10th Pass",
+    "12th Pass",
+    "Diploma",
+    "Undergraduate",
+    "Graduate",
+    "Postgraduate",
+    "Other",
+  ];
+
+  const passwordChecks = {
+    length: passwordValue.length >= 8,
+    uppercase: /[A-Z]/.test(passwordValue),
+    lowercase: /[a-z]/.test(passwordValue),
+    number: /[0-9]/.test(passwordValue),
+    special: /[^A-Za-z0-9\s]/.test(passwordValue),
+    noSpaces: /^\S+$/.test(passwordValue),
+  };
+
+  const passwordStrength = Object.values(passwordChecks).filter(Boolean).length;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (isLoading) return;
     const name = document.getElementById("name").value;
-    const email = document.getElementById("email").value;
+    const email = document.getElementById("email").value.trim().toLowerCase();
     const password = document.getElementById("password").value;
     const contact = document.getElementById("contact").value;
     const gender = document.getElementById("gender").value;
     const dob = document.getElementById("dob").value;
-    const city = document.getElementById("city").value;
-    const state = document.getElementById("state").value;
+    const city = selectedCity === "Other" ? otherCity.trim() : selectedCity;
+    const state = selectedState === "Other" ? otherState.trim() : selectedState;
     const pincode = document.getElementById("pincode").value;
     const address = document.getElementById("address").value;
     const profilePhoto = document.getElementById("profilePhoto").files[0];
-
-    const qualification = document.getElementById("qualification").value;
-    const serviceArea = document.getElementById("serviceArea").value;
+    const qualification =
+      selectedQualification === "Other"
+        ? otherQualification.trim()
+        : selectedQualification;
+    const serviceArea =
+      selectedCity === "Other" || selectedServiceArea === "Other"
+        ? otherServiceArea.trim()
+        : selectedServiceArea;
     const idProofType = document.getElementById("idProofType").value;
     const idProof = document.getElementById("idProof").files[0];
     const reason = document.getElementById("reason").value;
@@ -32,6 +73,7 @@ function Register() {
       return;
     }
 
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (email.trim() === "") {
       Swal.fire({
         icon: "error",
@@ -42,6 +84,17 @@ function Register() {
       return;
     }
 
+    if (!emailRegex.test(email.trim())) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid Email",
+        text: "Please enter a valid email address.",
+        confirmButtonColor: "#18a889",
+      });
+      return;
+    }
+
+    // Password Validation
     if (password.trim() === "") {
       Swal.fire({
         icon: "error",
@@ -52,11 +105,16 @@ function Register() {
       return;
     }
 
-    if (password.length !== 6) {
+    const strongPassword =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s])\S{8,}$/.test(
+        password,
+      );
+
+    if (!strongPassword) {
       Swal.fire({
         icon: "error",
-        title: "Oops!",
-        text: "Password must be exactly 6 characters.",
+        title: "Weak Password!",
+        text: "Password must contain at least 8 characters, uppercase, lowercase, number and special character, without spaces.",
         confirmButtonColor: "#18a889",
       });
       return;
@@ -72,11 +130,11 @@ function Register() {
       return;
     }
 
-    if (!/^[0-9]{10}$/.test(contact)) {
+    if (!/^[6-9]\d{9}$/.test(contact.trim())) {
       Swal.fire({
         icon: "error",
-        title: "Oops!",
-        text: "Contact number must contain exactly 10 digits.",
+        title: "Invalid Contact Number",
+        text: "Please enter a valid 10-digit Indian mobile number.",
         confirmButtonColor: "#18a889",
       });
       return;
@@ -102,21 +160,78 @@ function Register() {
       return;
     }
 
-    if (city.trim() === "") {
+    const [year, month, day] = dob.split("-").map(Number);
+    const birthDate = new Date(year, month - 1, day);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const ageLimit = new Date(
+      today.getFullYear() - 18,
+      today.getMonth(),
+      today.getDate(),
+    );
+
+    const isValidDate =
+      birthDate.getFullYear() === year &&
+      birthDate.getMonth() === month - 1 &&
+      birthDate.getDate() === day;
+
+    if (!isValidDate || birthDate > today) {
       Swal.fire({
         icon: "error",
-        title: "Oops!",
-        text: "Please enter your city.",
+        title: "Invalid Date!",
+        text: "Please enter a valid date of birth.",
         confirmButtonColor: "#18a889",
       });
       return;
     }
 
-    if (state.trim() === "") {
+    if (birthDate > ageLimit) {
+      Swal.fire({
+        icon: "warning",
+        title: "Age Restriction!",
+        text: "Volunteer must be at least 18 years old.",
+        confirmButtonColor: "#18a889",
+      });
+      return;
+    }
+
+    if (!city) {
       Swal.fire({
         icon: "error",
         title: "Oops!",
-        text: "Please enter your state.",
+        text: "Please select or enter your city.",
+        confirmButtonColor: "#18a889",
+      });
+      return;
+    }
+
+    if (!/^[a-zA-Z\s.-]+$/.test(city)) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid City!",
+        text: "Please enter a valid city name.",
+        confirmButtonColor: "#18a889",
+      });
+      return;
+    }
+
+    if (!state) {
+      Swal.fire({
+        icon: "error",
+        title: "Oops!",
+        text: "Please select or enter your state.",
+        confirmButtonColor: "#18a889",
+      });
+      return;
+    }
+
+    if (!/^[a-zA-Z\s.-]+$/.test(state)) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid State!",
+        text: "Please enter a valid state name.",
         confirmButtonColor: "#18a889",
       });
       return;
@@ -132,11 +247,11 @@ function Register() {
       return;
     }
 
-    if (!/^[0-9]{6}$/.test(pincode)) {
+    if (!/^\d{6}$/.test(pincode.trim())) {
       Swal.fire({
         icon: "error",
-        title: "Oops!",
-        text: "Pincode must contain exactly 6 digits.",
+        title: "Invalid Pincode!",
+        text: "Please enter a valid 6-digit pincode.",
         confirmButtonColor: "#18a889",
       });
       return;
@@ -152,6 +267,9 @@ function Register() {
       return;
     }
 
+    const allowedImageTypes = ["image/jpeg", "image/jpg", "image/png"];
+    const maxFileSize = 2 * 1024 * 1024;
+
     if (!profilePhoto) {
       Swal.fire({
         icon: "error",
@@ -162,11 +280,61 @@ function Register() {
       return;
     }
 
-    if (qualification.trim() === "") {
+    if (!allowedImageTypes.includes(profilePhoto.type)) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid File!",
+        text: "Only JPG, JPEG and PNG images are allowed.",
+        confirmButtonColor: "#18a889",
+      });
+      return;
+    }
+
+    if (profilePhoto.size > maxFileSize) {
+      Swal.fire({
+        icon: "error",
+        title: "File Too Large!",
+        text: "Profile photo must not exceed 2 MB.",
+        confirmButtonColor: "#18a889",
+      });
+      return;
+    }
+
+    if (!qualification) {
       Swal.fire({
         icon: "error",
         title: "Oops!",
         text: "Please enter your qualification.",
+        confirmButtonColor: "#18a889",
+      });
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9\s.,'-]+$/.test(qualification)) {
+      Swal.fire({
+        icon: "warning",
+        title: "Invalid Qualification!",
+        text: "Please enter a valid qualification.",
+        confirmButtonColor: "#18a889",
+      });
+      return;
+    }
+
+    if (!serviceArea) {
+      Swal.fire({
+        icon: "error",
+        title: "Oops!",
+        text: "Please select or enter your service area.",
+        confirmButtonColor: "#18a889",
+      });
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9\s.,'-]+$/.test(serviceArea)) {
+      Swal.fire({
+        icon: "warning",
+        title: "Invalid Service Area!",
+        text: "Please enter a valid service area.",
         confirmButtonColor: "#18a889",
       });
       return;
@@ -185,8 +353,28 @@ function Register() {
     if (!idProof) {
       Swal.fire({
         icon: "error",
-        title: "Oops!",
+        title: "ID Proof Required!",
         text: "Please upload your ID proof.",
+        confirmButtonColor: "#18a889",
+      });
+      return;
+    }
+
+    if (!allowedImageTypes.includes(idProof.type)) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid File!",
+        text: "Only JPG, JPEG and PNG files are allowed for ID proof.",
+        confirmButtonColor: "#18a889",
+      });
+      return;
+    }
+
+    if (idProof.size > maxFileSize) {
+      Swal.fire({
+        icon: "error",
+        title: "File Too Large!",
+        text: "ID proof must not exceed 2 MB.",
         confirmButtonColor: "#18a889",
       });
       return;
@@ -223,6 +411,7 @@ function Register() {
     data.append("reason", reason);
 
     // Send POST request to backend API
+    setIsLoading(true);
     Axios.post("http://localhost:3000/api/volunteerregister", data, {
       headers: {
         "Content-Type": "multipart/form-data",
@@ -233,7 +422,7 @@ function Register() {
           icon: "success",
           title: "Registration Successful",
           text: response.data.message,
-          confirmButtonColor: "#287df5",
+          confirmButtonColor: "#18a889",
         }).then(() => {
           window.location = "/";
         });
@@ -243,8 +432,11 @@ function Register() {
           icon: "error",
           title: "Registration Failed!",
           text: error.response?.data?.message || "Something went wrong.",
-          confirmButtonColor: "#287df5",
+          confirmButtonColor: "#18a889",
         });
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
   };
 
@@ -414,7 +606,6 @@ function Register() {
         }
 
         /* ================= BUTTON ================= */
-
         .button-section {
           text-align: center;
           margin-top: 12px;
@@ -435,13 +626,56 @@ function Register() {
           box-shadow: 0 8px 20px rgba(27, 166, 117, 0.18);
         }
 
+        .button-section button:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+          transform: none;
+        }
+
         .button-section button:hover {
           transform: translateY(-2px);
           box-shadow: 0 10px 25px rgba(27, 166, 117, 0.25);
         }
 
-        /* ================= MOBILE ================= */
+        .password-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }  
 
+        .password-wrapper input {
+          width: 100%;
+          padding-right: 65px;
+        }
+
+        .toggle-password {
+          position: absolute;
+          right: 12px;
+          border: none;
+          background: transparent;
+          color: #18a889;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .password-strength {
+          margin-top: 9px;
+        }
+
+        .strength-bars {
+          display: flex;
+          gap: 5px;
+          margin-bottom: 5px;
+        }
+
+        .strength-bars span {
+          height: 5px;
+          flex: 1;
+          border-radius: 5px;
+          background: #e5e7eb;
+        }
+
+        /* ================= MOBILE ================= */
         @media (max-width: 700px) {
           .register-page {
             padding: 20px 12px;
@@ -477,30 +711,25 @@ function Register() {
       `}</style>
 
       <div className="register-page">
-        <div className="register-card">
+        <form className="register-card" onSubmit={handleSubmit}>
           {/* ================= SAFEHER LOGO & HEADING ================= */}
-
           <div className="logo-section">
             <h1>Volunteer Registration</h1>
-
             <p>Join SafeHer and help build a safer community.</p>
           </div>
 
           {/* ================= PERSONAL INFORMATION ================= */}
-
           <div className="section-title">
             <span>Personal Information</span>
           </div>
 
           {/* Row 1 - Full Name */}
-
           <div className="form-group">
             <label>Full Name</label>
             <input type="text" id="name" placeholder="Enter your full name" />
           </div>
 
           {/* Row 2 - Email + Password */}
-
           <div className="form-row">
             <div className="form-group">
               <label>Email Address</label>
@@ -513,16 +742,72 @@ function Register() {
 
             <div className="form-group">
               <label>Password</label>
-              <input
-                type="password"
-                id="password"
-                placeholder="Enter your password"
-              />
+
+              <div className="password-wrapper">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  placeholder="Enter your password"
+                  value={passwordValue}
+                  onChange={(e) => setPasswordValue(e.target.value)}
+                />
+
+                <button
+                  type="button"
+                  className="toggle-password"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+
+              {passwordValue && (
+                <div className="password-strength">
+                  <div className="strength-bars">
+                    {[1, 2, 3, 4, 5, 6].map((item) => (
+                      <span
+                        key={item}
+                        className={item <= passwordStrength ? "active" : ""}
+                        style={{
+                          background:
+                            item <= passwordStrength
+                              ? passwordStrength <= 2
+                                ? "#e74c3c"
+                                : passwordStrength <= 4
+                                  ? "#f39c12"
+                                  : "#27ae60"
+                              : "#e5e7eb",
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  <small
+                    style={{
+                      color:
+                        passwordStrength <= 2
+                          ? "#e74c3c"
+                          : passwordStrength <= 4
+                            ? "#f39c12"
+                            : "#27ae60",
+                      fontWeight: "600",
+                    }}
+                  >
+                    Password Strength:{" "}
+                    {passwordStrength <= 2
+                      ? "Weak"
+                      : passwordStrength <= 4
+                        ? "Medium"
+                        : passwordStrength === 5
+                          ? "Strong"
+                          : "Very Strong"}
+                  </small>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Row 3 - Contact + Gender */}
-
           <div className="form-row">
             <div className="form-group">
               <label>Contact No.</label>
@@ -546,23 +831,75 @@ function Register() {
           </div>
 
           {/* Row 4 - Date of Birth */}
-
           <div className="form-group">
             <label>Date of Birth</label>
             <input type="date" id="dob" />
           </div>
 
           {/* Row 5 - City + State + Pincode */}
-
           <div className="form-row three-columns">
             <div className="form-group">
               <label>City</label>
-              <input type="text" id="city" placeholder="Enter city" />
+              {selectedCity === "Other" ? (
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Enter your city name"
+                  value={otherCity}
+                  onChange={(e) => setOtherCity(e.target.value)}
+                  maxLength={60}
+                />
+              ) : (
+                <select
+                  className="form-control"
+                  value={selectedCity}
+                  onChange={(e) => {
+                    setSelectedCity(e.target.value);
+                    setOtherCity("");
+                    setSelectedServiceArea("");
+                    setOtherServiceArea("");
+                  }}
+                >
+                  <option value="">Select City</option>
+                  {cityList.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                  <option value="Other">Other</option>
+                </select>
+              )}
             </div>
 
             <div className="form-group">
               <label>State</label>
-              <input type="text" id="state" placeholder="Enter state" />
+              {selectedState === "Other" ? (
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Enter your state name"
+                  value={otherState}
+                  onChange={(e) => setOtherState(e.target.value)}
+                  maxLength={60}
+                />
+              ) : (
+                <select
+                  className="form-control"
+                  value={selectedState}
+                  onChange={(e) => {
+                    setSelectedState(e.target.value);
+                    setOtherState("");
+                  }}
+                >
+                  <option value="">Select State</option>
+                  {indianStates.map((stateName) => (
+                    <option key={stateName} value={stateName}>
+                      {stateName}
+                    </option>
+                  ))}
+                  <option value="Other">Other</option>
+                </select>
+              )}
             </div>
 
             <div className="form-group">
@@ -572,10 +909,8 @@ function Register() {
           </div>
 
           {/* Row 6 - Address */}
-
           <div className="form-group">
             <label>Address</label>
-
             <textarea
               id="address"
               placeholder="Enter your complete address"
@@ -584,51 +919,89 @@ function Register() {
           </div>
 
           {/* Row 7 - Profile Photo */}
-
           <div className="form-group">
             <label>Profile Photo</label>
-
-            <input type="file" id="profilePhoto" accept="image/*" />
+            <input type="file" id="profilePhoto" />
           </div>
 
           {/* ================= VOLUNTEER INFORMATION ================= */}
-
           <div className="section-title">
             <span>Volunteer Information</span>
           </div>
 
           {/* Qualification + Availability */}
-
           <div className="form-row">
             <div className="form-group">
               <label>Qualification</label>
-
-              <input
-                type="text"
-                id="qualification"
-                placeholder="Enter your qualification"
-              />
+              {selectedQualification === "Other" ? (
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Enter your qualification"
+                  value={otherQualification}
+                  onChange={(e) => setOtherQualification(e.target.value)}
+                  maxLength={60}
+                />
+              ) : (
+                <select
+                  className="form-control"
+                  value={selectedQualification}
+                  onChange={(e) => {
+                    setSelectedQualification(e.target.value);
+                    setOtherQualification("");
+                  }}
+                >
+                  <option value="">Select Qualification</option>
+                  {qualificationOptions.map((qualification) => (
+                    <option key={qualification} value={qualification}>
+                      {qualification}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="form-group">
               <label>Preferred Service Area</label>
-              <input
-                type="text"
-                id="serviceArea"
-                placeholder="Enter preferred service area"
-              />
+              {selectedCity === "Other" || selectedServiceArea === "Other" ? (
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Enter preferred service area"
+                  value={otherServiceArea}
+                  onChange={(e) => setOtherServiceArea(e.target.value)}
+                  maxLength={100}
+                />
+              ) : (
+                <select
+                  className="form-control"
+                  value={selectedServiceArea}
+                  onChange={(e) => {
+                    setSelectedServiceArea(e.target.value);
+                    setOtherServiceArea("");
+                  }}
+                  disabled={!selectedCity}
+                >
+                  <option value="">
+                    {selectedCity ? "Select Service Area" : "Select City First"}
+                  </option>
+                  {(serviceAreaMap[selectedCity] || []).map((area) => (
+                    <option key={area} value={area}>
+                      {area}
+                    </option>
+                  ))}
+                  <option value="Other">Other</option>
+                </select>
+              )}
             </div>
           </div>
 
           {/* ID Proof Type + Upload ID Proof */}
-
           <div className="form-row">
             <div className="form-group">
               <label>ID Proof Type</label>
-
               <select id="idProofType">
                 <option value="">Select ID Proof Type</option>
-
                 <option>Aadhaar Card</option>
                 <option>Driving License</option>
                 <option>Pan Card</option>
@@ -644,10 +1017,8 @@ function Register() {
           </div>
 
           {/* Reason for Joining */}
-
           <div className="form-group">
             <label>Reason for Joining</label>
-
             <textarea
               id="reason"
               placeholder="Tell us why you want to become a SafeHer volunteer..."
@@ -656,13 +1027,12 @@ function Register() {
           </div>
 
           {/* ================= APPLY BUTTON ================= */}
-
           <div className="button-section">
-            <button type="button" onClick={handleSubmit}>
-              Apply as Volunteer
+            <button type="submit" disabled={isLoading}>
+              {isLoading ? "Submitting..." : "Apply as Volunteer"}
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </>
   );

@@ -361,6 +361,54 @@
   font-size: 13px;
 }
 
+/* ================= PASSWORD SHOW / HIDE ================= */
+.vol-password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.vol-password-wrapper input {
+  padding-right: 42px;
+}
+
+.vol-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+
+  border: none;
+  background: transparent;
+  color: #78908a;
+
+  cursor: pointer;
+  font-size: 15px;
+  padding: 5px;
+}
+
+.vol-password-toggle:hover {
+  color: #16a085;
+}
+
+.vol-password-toggle:focus-visible {
+  outline: 2px solid #16a085;
+  border-radius: 4px;
+}
+
+.vol-password-hint {
+  display: block;
+  margin-top: 6px;
+  color: #78908a;
+  font-size: 11px;
+}
+
+.vol-save-btn:disabled,
+.vol-cancel-btn:disabled,
+.vol-photo-edit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ================= RESPONSIVE ================= */
 
 @media (max-width: 950px) {

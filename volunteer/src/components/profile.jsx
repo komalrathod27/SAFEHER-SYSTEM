@@ -7,11 +7,15 @@ function Profile() {
   const [editMode, setEditMode] = useState(false);
   const [volunteer, setVolunteer] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [originalVolunteer, setOriginalVolunteer] = useState(null);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const fetchVolunteerProfile = async (userId) => {
     try {
@@ -70,6 +74,14 @@ function Profile() {
     });
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (photoPreview) {
+        URL.revokeObjectURL(photoPreview);
+      }
+    };
+  }, [photoPreview]);
+
   if (loading) {
     return (
       <div className="vol-profile-page">
@@ -95,13 +107,11 @@ function Profile() {
   //photo change
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
-
     if (!file) {
       return;
     }
 
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
-
     if (!allowedTypes.includes(file.type)) {
       Swal.fire({
         icon: "warning",
@@ -130,8 +140,8 @@ function Profile() {
 
   // Save Profile Changes
   const handleSaveProfile = () => {
+    if (isSaving) return;
     const storedData = sessionStorage.getItem("mydata");
-
     if (!storedData) {
       Swal.fire({
         icon: "error",
@@ -144,7 +154,6 @@ function Profile() {
     }
 
     const volunteerData = JSON.parse(storedData);
-
     if (!volunteerData.user_id) {
       Swal.fire({
         icon: "error",
@@ -296,6 +305,16 @@ function Profile() {
 
     // Password validation
     if (newPassword) {
+      if (!currentPassword) {
+        Swal.fire({
+          icon: "warning",
+          title: "Current Password Required",
+          text: "Please enter your current password.",
+          confirmButtonColor: "#16a085",
+        });
+        return;
+      }
+
       if (newPassword.length < 6) {
         Swal.fire({
           icon: "warning",
@@ -325,8 +344,19 @@ function Profile() {
         });
         return;
       }
+
+      if (currentPassword === newPassword) {
+        Swal.fire({
+          icon: "warning",
+          title: "Choose a New Password",
+          text: "Your new password must be different from your current password.",
+          confirmButtonColor: "#16a085",
+        });
+        return;
+      }
     }
 
+    setIsSaving(true);
     Axios.put(
       `http://localhost:3000/api/updatevolunteerprofile/${volunteerData.user_id}`,
       {
@@ -347,12 +377,12 @@ function Profile() {
             await Axios.put(
               `http://localhost:3000/api/updatevolunteerpassword/${volunteerData.user_id}`,
               {
+                currentPassword: currentPassword,
                 password: newPassword,
               },
             );
           } catch (passwordError) {
             console.log("Password update error:", passwordError);
-
             Swal.fire({
               icon: "error",
               title: "Password Update Failed",
@@ -361,7 +391,6 @@ function Profile() {
                 "Profile information was saved, but the password could not be updated.",
               confirmButtonColor: "#16a085",
             });
-
             return;
           }
         }
@@ -383,8 +412,13 @@ function Profile() {
 
             setSelectedPhoto(null);
             setPhotoPreview(null);
+
+            setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
+            setShowNewPassword(false);
+            setShowConfirmPassword(false);
+
             setEditMode(false);
 
             Swal.fire({
@@ -428,6 +462,9 @@ function Profile() {
             "Something went wrong while updating your profile.",
           confirmButtonColor: "#16a085",
         });
+      })
+      .finally(() => {
+        setIsSaving(false);
       });
   };
 
@@ -463,19 +500,38 @@ function Profile() {
           <div className="vol-profile-actions">
             <button
               className="vol-cancel-btn"
+              disabled={isSaving}
               onClick={() => {
                 setVolunteer({ ...originalVolunteer });
                 setSelectedPhoto(null);
                 setPhotoPreview(null);
                 setEditMode(false);
+                setCurrentPassword("");
+                setNewPassword("");
+                setConfirmPassword("");
+                setShowNewPassword(false);
+                setShowConfirmPassword(false);
               }}
             >
               Cancel
             </button>
 
-            <button className="vol-save-btn" onClick={handleSaveProfile}>
-              <i className="fa-solid fa-check"></i>
-              Save Changes
+            <button
+              className="vol-save-btn"
+              onClick={handleSaveProfile}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-check"></i>
+                  Save Changes
+                </>
+              )}
             </button>
           </div>
         )}
@@ -504,6 +560,7 @@ function Profile() {
                 <button
                   type="button"
                   className="vol-photo-edit"
+                  disabled={isSaving}
                   onClick={() =>
                     document.getElementById("profilePhotoInput").click()
                   }
@@ -586,36 +643,87 @@ function Profile() {
           </div>
         </div>
 
-        {/* Password */}
+        {/* ================= PASSWORD ================= */}
         <div className="vol-profile-section">
           {!editMode ? (
             <div className="vol-field">
               <label>Password</label>
-
-              <input type="password" value="••••••" disabled />
+              <input type="password" value="••••••" disabled readOnly />
             </div>
           ) : (
-            <div className="vol-profile-grid">
+            <div className="vol-profile-grid three-column">
+              <div className="vol-field">
+                <label>Current Password</label>
+                <input
+                  type="password"
+                  placeholder="Enter current password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+              </div>
+
               <div className="vol-field">
                 <label>New Password</label>
 
-                <input
-                  type="password"
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
+                <div className="vol-password-wrapper">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+
+                  <button
+                    type="button"
+                    className="vol-password-toggle"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    aria-label={
+                      showNewPassword ? "Hide password" : "Show password"
+                    }
+                  >
+                    <i
+                      className={
+                        showNewPassword
+                          ? "fa-solid fa-eye-slash"
+                          : "fa-solid fa-eye"
+                      }
+                    ></i>
+                  </button>
+                </div>
+
+                <small className="vol-password-hint">
+                  Minimum 6 characters required.
+                </small>
               </div>
 
               <div className="vol-field">
                 <label>Confirm Password</label>
 
-                <input
-                  type="password"
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
+                <div className="vol-password-wrapper">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+
+                  <button
+                    type="button"
+                    className="vol-password-toggle"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={
+                      showConfirmPassword ? "Hide password" : "Show password"
+                    }
+                  >
+                    <i
+                      className={
+                        showConfirmPassword
+                          ? "fa-solid fa-eye-slash"
+                          : "fa-solid fa-eye"
+                      }
+                    ></i>
+                  </button>
+                </div>
               </div>
             </div>
           )}
