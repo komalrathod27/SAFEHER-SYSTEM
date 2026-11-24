@@ -8,6 +8,7 @@ function AdminProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -15,7 +16,11 @@ function AdminProfile() {
     const data = JSON.parse(sessionStorage.getItem("mydata"));
     console.log("Session Data:", data);
     if (data && data._id) {
-      Axios.get(`http://localhost:3000/api/getadminprofile/${data._id}`)
+      Axios.get(`http://localhost:3000/api/getadminprofile/${data._id}`, {
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+        },
+      })
         .then((res) => {
           if (res.data.status === "Success") {
             setAdminData(res.data.data);
@@ -46,6 +51,16 @@ function AdminProfile() {
         icon: "warning",
         title: "Invalid Email",
         text: "Please enter a valid email address.",
+        confirmButtonColor: "#2f80ed",
+      });
+      return;
+    }
+
+    if (newPassword && !currentPassword) {
+      Swal.fire({
+        icon: "warning",
+        title: "Current Password Required",
+        text: "Please enter your current password.",
         confirmButtonColor: "#2f80ed",
       });
       return;
@@ -93,10 +108,18 @@ function AdminProfile() {
       return;
     }
 
-    Axios.put(`http://localhost:3000/api/editadminprofile/${data._id}`, {
-      name: editName,
-      email: editEmail,
-    }).then((res) => {
+    Axios.put(
+      `http://localhost:3000/api/editadminprofile/${data._id}`,
+      {
+        name: editName,
+        email: editEmail,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+        },
+      },
+    ).then((res) => {
       if (res.data.status === "Success") {
         // Update name and email first
         setAdminData(res.data.data);
@@ -109,11 +132,21 @@ function AdminProfile() {
 
         // If new password is entered, update password
         if (newPassword) {
-          Axios.put(`http://localhost:3000/api/editadminpassword/${data._id}`, {
-            password: newPassword,
-          })
+          Axios.put(
+            `http://localhost:3000/api/editadminpassword/${data._id}`,
+            {
+              currentPassword: currentPassword,
+              newPassword: newPassword,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${data.token}`,
+              },
+            },
+          )
             .then((passwordRes) => {
               if (passwordRes.data.status === "Success") {
+                setCurrentPassword("");
                 setNewPassword("");
                 setConfirmPassword("");
 
@@ -226,7 +259,6 @@ function AdminProfile() {
               </div>
 
               {/* Password */}
-              {/* Password */}
               <div className="form-group mt-2">
                 <label className="font-weight-bold">
                   <i className="fas fa-lock text-primary mr-2"></i>
@@ -235,19 +267,30 @@ function AdminProfile() {
 
                 {isEditing ? (
                   <div className="row">
-                    {/* New Password */}
-                    <div className="col-md-6">
+                    {/* Current Password */}
+                    <div className="col-md-4">
                       <input
                         type="password"
                         className="form-control"
-                        placeholder="Enter new password"
+                        placeholder="Current password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                      />
+                    </div>
+
+                    {/* New Password */}
+                    <div className="col-md-4">
+                      <input
+                        type="password"
+                        className="form-control"
+                        placeholder="New password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                       />
                     </div>
 
                     {/* Confirm Password */}
-                    <div className="col-md-6">
+                    <div className="col-md-4">
                       <input
                         type="password"
                         className="form-control"
@@ -281,6 +324,7 @@ function AdminProfile() {
                       onClick={() => {
                         setEditName(adminData?.name || "");
                         setEditEmail(adminData?.email || "");
+                        setCurrentPassword("");
                         setNewPassword("");
                         setConfirmPassword("");
                         setIsEditing(false);

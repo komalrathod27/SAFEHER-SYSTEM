@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Swal from "sweetalert2";
+import axios from "axios";
 
 function ForgotPassword() {
+  const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
 
     if (!trimmedEmail) {
       Swal.fire(
@@ -21,7 +22,6 @@ function ForgotPassword() {
     }
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
     if (!emailPattern.test(trimmedEmail)) {
       Swal.fire(
         "Invalid Email",
@@ -31,9 +31,58 @@ function ForgotPassword() {
       return;
     }
 
-    navigate("/verifyotp", {
-      state: { email: trimmedEmail },
-    });
+    if (isLoading) return;
+    try {
+      setIsLoading(true);
+      const response = await axios.post(
+        "http://localhost:3000/api/forgot-password/send-otp",
+        {
+          email: trimmedEmail,
+          role: "woman",
+        },
+      );
+
+      if (response.data.success) {
+        await Swal.fire("Request Submitted", response.data.message, "success");
+        navigate("/verifyotp", {
+          state: {
+            email: trimmedEmail,
+            role: "woman",
+          },
+        });
+      }
+    } catch (error) {
+      const isCooldownActive = error.response?.status === 429;
+      const remainingSeconds = error.response?.data?.remainingSeconds;
+
+      let remainingTime = "";
+
+      if (typeof remainingSeconds === "number") {
+        const days = Math.floor(remainingSeconds / 86400);
+        const hours = Math.floor((remainingSeconds % 86400) / 3600);
+        const minutes = Math.floor((remainingSeconds % 3600) / 60);
+        const seconds = remainingSeconds % 60;
+
+        if (days > 0) remainingTime += `${days}d `;
+        if (hours > 0) remainingTime += `${hours}h `;
+        if (minutes > 0) remainingTime += `${minutes}m `;
+        if (seconds > 0 || !remainingTime) remainingTime += `${seconds}s`;
+      }
+
+      await Swal.fire({
+        icon: isCooldownActive ? "warning" : "error",
+        title: isCooldownActive
+          ? "Maximum OTP Limit Reached"
+          : "Unable to Send OTP",
+        text: isCooldownActive
+          ? `You have reached the maximum OTP generation limit. Please try again after ${remainingTime}.`
+          : error.response?.data?.message ||
+            "Something went wrong. Please try again.",
+        confirmButtonColor: "#287df5",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -174,7 +223,7 @@ function ForgotPassword() {
             <label htmlFor="forgot-email">Email Address</label>
 
             <input
-              type="text"
+              type="email"
               id="forgot-email"
               placeholder="Enter your email address"
               value={email}
@@ -184,8 +233,12 @@ function ForgotPassword() {
             />
           </div>
 
-          <button type="submit" className="forgot-password-button">
-            Continue
+          <button
+            type="submit"
+            className="forgot-password-button"
+            disabled={isLoading}
+          >
+            {isLoading ? "Sending OTP..." : "Continue"}
           </button>
         </form>
 

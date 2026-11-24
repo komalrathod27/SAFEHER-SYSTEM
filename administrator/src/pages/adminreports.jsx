@@ -13,8 +13,14 @@ function AdminReports() {
 
   const fetchReports = useCallback(async () => {
     try {
+      const data = JSON.parse(sessionStorage.getItem("mydata"));
       const response = await axios.get(
         "http://localhost:3000/api/getadminincidentreports",
+        {
+          headers: {
+            Authorization: `Bearer ${data.token}`,
+          },
+        },
       );
 
       setReports(response.data);
@@ -28,35 +34,8 @@ function AdminReports() {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadReports() {
-      try {
-        const response = await axios.get(
-          "http://localhost:3000/api/getadminincidentreports",
-        );
-        if (isMounted) {
-          setReports(response.data);
-          setReportsError("");
-        }
-      } catch (error) {
-        console.error("Incident reports fetch error:", error);
-        if (isMounted) {
-          setReportsError("Unable to load incident report counts.");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadReports();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    fetchReports();
+  }, [fetchReports]);
 
   const reportStatusCounts = {
     underReview: reports.filter((report) => report.status === "Under Review")
@@ -178,7 +157,7 @@ function AdminReports() {
                         setStatusFilter(e.target.value);
                       }}
                     >
-                      <option value="All">All Reports</option>
+                      <option value="">All Reports</option>
 
                       <option value="Under Review">Under Review</option>
 
@@ -484,8 +463,17 @@ function AdminReports() {
                         className="btn btn-success"
                         onClick={async () => {
                           try {
+                            const data = JSON.parse(
+                              sessionStorage.getItem("mydata"),
+                            );
                             await axios.put(
                               `http://localhost:3000/api/verifyincidentreport/${selectedReport._id}`,
+                              {},
+                              {
+                                headers: {
+                                  Authorization: `Bearer ${data.token}`,
+                                },
+                              },
                             );
 
                             alert("Incident report verified successfully.");
@@ -566,10 +554,16 @@ function AdminReports() {
                     }
 
                     try {
+                      const data = JSON.parse(sessionStorage.getItem("mydata"));
                       await axios.put(
                         `http://localhost:3000/api/rejectincidentreport/${selectedReport._id}`,
                         {
                           adminRemarks: rejectionReason,
+                        },
+                        {
+                          headers: {
+                            Authorization: `Bearer ${data.token}`,
+                          },
                         },
                       );
 

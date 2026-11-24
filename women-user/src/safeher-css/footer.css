@@ -20,18 +20,6 @@
   font-family: "Poppins", sans-serif;
 }
 
-/* Gradient accent line on top */
-.safeher-footer>.safeher-footer-container::before {
-  content: "";
-  position: absolute;
-  top: -72px;
-  left: 50%;
-  width: 100vw;
-  height: 4px;
-  transform: translateX(-50%);
-  background: linear-gradient(90deg, #7c3aed, var(--footer-pink), #ff8abb);
-}
-
 /* Decorative circles */
 .safeher-footer::before,
 .safeher-footer::after {
@@ -353,11 +341,39 @@
   max-width: 650px;
 }
 
+.safeher-footer-back-to-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 138, 187, 0.45);
+  border-radius: 999px;
+  background: rgba(232, 62, 140, 0.12);
+  color: #ffffff;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    transform 0.25s ease;
+}
+
+.safeher-footer-back-to-top:hover {
+  background: rgba(232, 62, 140, 0.28);
+  transform: translateY(-2px);
+}
+
 /* ---------- Accessibility ---------- */
 .safeher-footer a:focus-visible {
   outline: 2px solid var(--footer-pink-soft);
   outline-offset: 4px;
   border-radius: 6px;
+}
+
+.safeher-footer-back-to-top:focus-visible {
+  outline: 2px solid var(--footer-pink-soft);
+  outline-offset: 4px;
 }
 
 /* ---------- Tablet ---------- */

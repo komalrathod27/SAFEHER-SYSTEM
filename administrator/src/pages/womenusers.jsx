@@ -9,7 +9,12 @@ function WomenUsers() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    Axios.get("http://localhost:3000/api/getwomanusers")
+    const data = JSON.parse(sessionStorage.getItem("mydata"));
+    Axios.get("http://localhost:3000/api/getwomanusers", {
+      headers: {
+        Authorization: `Bearer ${data.token}`,
+      },
+    })
       .then((response) => {
         setUsers(response.data);
       })
@@ -17,7 +22,11 @@ function WomenUsers() {
         console.log(error);
       });
 
-    Axios.get("http://localhost:3000/api/getnewwomanusers")
+    Axios.get("http://localhost:3000/api/getnewwomanusers", {
+      headers: {
+        Authorization: `Bearer ${data.token}`,
+      },
+    })
       .then((response) => {
         setNewUsers(response.data.newUsers);
       })
@@ -75,7 +84,12 @@ function WomenUsers() {
   }
 
   function viewUser(id) {
-    Axios.get(`http://localhost:3000/api/getwomanuserdetails/${id}`)
+    const data = JSON.parse(sessionStorage.getItem("mydata"));
+    Axios.get(`http://localhost:3000/api/getwomanuserdetails/${id}`, {
+      headers: {
+        Authorization: `Bearer ${data.token}`,
+      },
+    })
       .then((response) => {
         setSelectedUser(response.data);
         document.getElementById("userDetailsModal").style.display = "flex";
@@ -287,7 +301,11 @@ function WomenUsers() {
             {/* Personal Information */}
             <div className="text-center mb-4">
               <img
-                src={`http://localhost:3000/public/${selectedUser?.profile_photo}`}
+                src={
+                  selectedUser?.profile_photo
+                    ? `http://localhost:3000/public/${selectedUser.profile_photo}`
+                    : null
+                }
                 alt="Profile"
                 style={{
                   width: "100px",

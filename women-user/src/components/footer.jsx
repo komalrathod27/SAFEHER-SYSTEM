@@ -1,17 +1,20 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import "../safeher-css/footer.css";
 
 function Footer() {
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const exploreLinks = [
     { label: "Home", path: "/" },
     { label: "About SafeHer", path: "/about" },
-    { label: "How It Works", path: "/how-it-works" },
+    { label: "How It Works", path: "/howitworks" },
   ];
 
   const safetyLinks = [
-    { label: "Safety Map", path: "/safety-map" },
-    { label: "Safety Resources", path: "/safety-resources" },
+    { label: "Safety Map", path: "/safetymap" },
+    { label: "Safety Resources", path: "/safetyresources" },
     { label: "Safety Articles", path: "/safety-articles" },
   ];
 
@@ -31,9 +34,10 @@ function Footer() {
               to="/"
               className="safeher-footer-logo-card"
               aria-label="SafeHer home"
+              onClick={scrollToTop}
             >
               <img
-                src="assets/images/all-img/SafeHer logo.png"
+                src="/assets/images/all-img/SafeHer logo.png"
                 alt="SafeHer - Because every woman deserves to feel safe"
                 className="safeher-footer-logo-img"
               />
@@ -59,7 +63,9 @@ function Footer() {
             <ul className="safeher-footer-links">
               {exploreLinks.map((link) => (
                 <li key={link.label}>
-                  <Link to={link.path}>{link.label}</Link>
+                  <Link to={link.path} onClick={scrollToTop}>
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -74,7 +80,9 @@ function Footer() {
             <ul className="safeher-footer-links">
               {safetyLinks.map((link) => (
                 <li key={link.label}>
-                  <Link to={link.path}>{link.label}</Link>
+                  <Link to={link.path} onClick={scrollToTop}>
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -90,7 +98,11 @@ function Footer() {
                 and connect with the community.
               </p>
 
-              <Link to="/login" className="safeher-footer-cta">
+              <Link
+                to="/login"
+                className="safeher-footer-cta"
+                onClick={scrollToTop}
+              >
                 Login to SafeHer
                 <span aria-hidden="true">→</span>
               </Link>
@@ -124,7 +136,7 @@ function Footer() {
         {/* BOTTOM */}
         <div className="safeher-footer-bottom">
           <p>
-            © {new Date().getFullYear()}{" "}
+            Copyright © {new Date().getFullYear()}{" "}
             <span className="safeher-footer-brand-name">SafeHer</span>. All
             rights reserved.
           </p>
@@ -137,6 +149,13 @@ function Footer() {
             SafeHer supports community safety and does not replace official
             emergency services.
           </p>
+          <button
+            type="button"
+            className="safeher-footer-back-to-top"
+            onClick={scrollToTop}
+          >
+            Back to top <span aria-hidden="true">↑</span>
+          </button>
         </div>
       </div>
     </footer>

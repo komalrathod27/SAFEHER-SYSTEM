@@ -1,0 +1,269 @@
+* {
+  box-sizing: border-box;
+}
+
+.register-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(91, 201, 170, 0.16), transparent 30%),
+    radial-gradient(circle at 90% 80%, rgba(91, 201, 170, 0.12), transparent 30%),
+    #f3faf7;
+  padding: 35px 20px;
+  font-family: "Poppins", Arial, sans-serif;
+}
+
+.register-card {
+  width: 100%;
+  max-width: 950px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 38px 45px 42px;
+  box-shadow: 0 8px 35px rgba(0, 80, 50, 0.10);
+  border: 1px solid #e4f0eb;
+}
+
+/* LOGO & HEADING */
+
+.logo-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.safeher-logo {
+  width: 230px;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+.logo-section h1 {
+  margin: 8px 0 8px;
+  color: #0d4f5e;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.logo-section p {
+  margin: 0;
+  color: #6f8580;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* SECTION TITLE */
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 30px 0 23px;
+  color: #176b4d;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.section-title::before,
+.section-title::after {
+  content: "";
+  height: 1px;
+  background: #d5e8df;
+  flex: 1;
+}
+
+.section-title span {
+  white-space: nowrap;
+}
+
+/* FORM LAYOUT */
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin-bottom: 0;
+}
+
+.three-columns {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  margin-bottom: 8px;
+  color: #263f37;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  border: 1px solid #d7e5df;
+  border-radius: 9px;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #263a32;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.form-group input,
+.form-group select {
+  height: 48px;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 95px;
+  line-height: 1.5;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #20a987;
+  box-shadow: 0 0 0 3px rgba(32, 169, 135, 0.10);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #9aaba5;
+}
+
+/* FILE INPUT */
+
+.form-group input[type="file"] {
+  padding: 10px 12px;
+  cursor: pointer;
+  background: #f8fbf9;
+}
+
+.form-group input[type="file"]::file-selector-button {
+  border: none;
+  background: #e4f5ef;
+  color: #176b4d;
+  padding: 7px 12px;
+  border-radius: 6px;
+  margin-right: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+/* BUTTON */
+
+.button-section {
+  text-align: center;
+  margin-top: 12px;
+}
+
+.button-section button {
+  width: 100%;
+  max-width: 400px;
+  border: none;
+  background: linear-gradient(135deg, #18a889, #27b45f);
+  color: white;
+  padding: 14px 30px;
+  border-radius: 9px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 8px 20px rgba(27, 166, 117, 0.18);
+}
+
+.button-section button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.button-section button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(27, 166, 117, 0.25);
+}
+
+/* PASSWORD */
+
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 65px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  border: none;
+  background: transparent;
+  color: #18a889;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.password-strength {
+  margin-top: 9px;
+}
+
+.strength-bars {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.strength-bars span {
+  height: 5px;
+  flex: 1;
+  border-radius: 5px;
+  background: #e5e7eb;
+}
+
+/* MOBILE */
+
+@media (max-width: 700px) {
+  .register-page {
+    padding: 20px 12px;
+  }
+
+  .register-card {
+    padding: 28px 20px;
+    border-radius: 15px;
+  }
+
+  .form-row,
+  .three-columns {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .logo-section h1 {
+    font-size: 25px;
+  }
+
+  .safeher-logo {
+    width: 190px;
+  }
+
+  .section-title {
+    font-size: 16px;
+  }
+
+  .button-section button {
+    max-width: 100%;
+  }
+}

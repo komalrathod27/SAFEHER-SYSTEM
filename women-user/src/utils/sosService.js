@@ -58,17 +58,26 @@ export const activateSOSAlert = () => {
       },
     });
 
-    const sendSOS = (lat, lng, address) => {
-      Axios.post("http://localhost:3000/api/sos/create", {
-        womanId: user.user_id,
-        womanName: user.fullName,
-        womanEmail: user.email,
-        womanPhone: user.phoneNumber || "",
-        womanLat: lat,
-        womanLng: lng,
-        womanAddress: address || "Current GPS Live Location",
-        emergencyType: "Emergency SOS Assistance",
-      })
+    const sendSOS = (lat, lng, address, accuracy) => {
+      Axios.post(
+        "http://localhost:3000/api/sos/create",
+        {
+          womanId: user.user_id,
+          womanName: user.fullName,
+          womanEmail: user.email,
+          womanPhone: user.phoneNumber || "",
+          womanLat: lat,
+          womanLng: lng,
+          womanAccuracy: accuracy,
+          womanAddress: address || "Current GPS Live Location",
+          emergencyType: "Emergency SOS Assistance",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${user.token || ""}`,
+          },
+        },
+      )
         .then((resp) => {
           localStorage.setItem("activeSosId", resp.data.sos._id);
 
@@ -94,8 +103,19 @@ export const activateSOSAlert = () => {
         });
     };
 
-    getAccurateLocation(user).then((loc) => {
-      sendSOS(loc.lat, loc.lng, loc.address);
-    });
+    getAccurateLocation(user)
+      .then((loc) => {
+        sendSOS(loc.lat, loc.lng, loc.address, loc.accuracy);
+      })
+      .catch((error) => {
+        Swal.fire({
+          icon: "error",
+          title: "Unable to Get GPS Location",
+          text:
+            error.message ||
+            "Please allow device location and try again. Call 112 if you need immediate assistance.",
+          confirmButtonColor: "#dc2626",
+        });
+      });
   });
 };

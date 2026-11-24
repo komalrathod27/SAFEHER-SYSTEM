@@ -98,11 +98,22 @@ function VolunteerReport() {
       setLoading(true);
       setError("");
 
-      const [volunteerRes, sosRes, trustRes, responsesRes] = await Promise.all([
-        axios.get(`${API}/api/getvolunteer`),
-        axios.get(`${API}/api/sos/all`),
-        axios.get(`${API}/api/sos/trust-score/${id}`),
-        axios.get(`${API}/api/sos/my-responses/${id}`),
+      const data = JSON.parse(sessionStorage.getItem("mydata"));
+
+      if (!data?.token) {
+        throw new Error("Admin token not found. Please login again.");
+      }
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+        },
+      };
+
+      const [volunteerRes, sosRes, trustRes] = await Promise.all([
+        axios.get(`${API}/api/getvolunteer`, config),
+        axios.get(`${API}/api/admin/sos/all`, config),
+        axios.get(`${API}/api/sos/trust-score/${id}`, config),
       ]);
 
       // Volunteer Profile
@@ -124,33 +135,29 @@ function VolunteerReport() {
       setVolunteer(selectedVolunteer);
 
       // All SOS Records
-      const allSOS = getList(sosRes.data, ["requests", "data"]);
+      const allSOS = getList(sosRes.data, [
+        "requests",
+        "sosRequests",
+        "sos",
+        "data",
+      ]);
 
-      // Responses API
-      const responses = getList(responsesRes.data, ["responses", "data"]);
-
-      // Rejected SOS IDs for this volunteer
-      const rejectedIds = new Set(
-        responses
-          .filter((sos) =>
-            (sos.rejectedByVolunteerIds || []).some(
-              (volunteerId) => String(volunteerId) === String(id),
-            ),
-          )
-          .map((sos) => String(sos._id)),
-      );
+      // Helper for normal and populated MongoDB IDs
+      const getId = (value) => String(value?._id || value || "");
 
       // Assigned SOS records
       const assignedSOS = allSOS.filter(
-        (sos) => String(sos.volunteerId) === String(id),
+        (sos) => getId(sos.volunteerId) === String(id),
       );
 
       // Rejected SOS records
       const rejectedSOS = allSOS.filter((sos) =>
         (sos.rejectedByVolunteerIds || []).some(
-          (volunteerId) => String(volunteerId) === String(id),
+          (volunteerId) => getId(volunteerId) === String(id),
         ),
       );
+
+      const rejectedIds = new Set(rejectedSOS.map((sos) => String(sos._id)));
 
       setResolvedCount(
         assignedSOS.filter((sos) => sos.status === "Resolved").length,
@@ -179,8 +186,16 @@ function VolunteerReport() {
       // Trust Score
       setTrustData(trustRes.data);
     } catch (err) {
-      console.error("Error fetching Volunteer Report:", err);
-      setError("Unable to load the report. Please try again.");
+      console.error(
+        "Error fetching Volunteer Report:",
+        err.response?.data || err,
+      );
+
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Unable to load the report. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -191,12 +206,23 @@ function VolunteerReport() {
     try {
       setLoadingDetails(true);
 
-      const response = await axios.get(`${API}/api/sos/details/${sosId}`);
+      const data = JSON.parse(sessionStorage.getItem("mydata"));
+
+      if (!data?.token) {
+        throw new Error("Admin token not found. Please login again.");
+      }
+
+      const response = await axios.get(`${API}/api/sos/details/${sosId}`, {
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+        },
+      });
 
       setSelectedSOS(response.data.sos || response.data);
     } catch (err) {
-      console.error("Error fetching SOS details:", err);
-      alert("Unable to load SOS details.");
+      console.error("Error fetching SOS details:", err.response?.data || err);
+
+      alert(err.response?.data?.message || "Unable to load SOS details.");
     } finally {
       setLoadingDetails(false);
     }
@@ -579,7 +605,7 @@ function VolunteerReport() {
               aria-modal="true"
               aria-labelledby="volunteer-sos-detail-title"
             >
-              <div               className="modal-content sos-detail-modal volunteer-sos-detail-modal">
+              <div className="modal-content sos-detail-modal volunteer-sos-detail-modal">
                 <div className="modal-header sos-detail-header">
                   <div className="sos-detail-heading">
                     <span className="sos-detail-icon" aria-hidden="true">
@@ -621,7 +647,8 @@ function VolunteerReport() {
                             Emergency type
                           </span>
                           <h6 className="sos-detail-emergency">
-                            {selectedSOS.emergencyType || "Emergency Assistance"}
+                            {selectedSOS.emergencyType ||
+                              "Emergency Assistance"}
                           </h6>
                           <span className="sos-detail-date">
                             <i className="mdi mdi-calendar-clock mr-1"></i>
@@ -673,17 +700,13 @@ function VolunteerReport() {
                         </h6>
                         <div className="sos-detail-fields">
                           <div className="sos-detail-field">
-                            <span className="sos-detail-label">
-                              Volunteer
-                            </span>
+                            <span className="sos-detail-label">Volunteer</span>
                             <span className="sos-detail-value">
                               {selectedSOS.volunteerName || "Not assigned"}
                             </span>
                           </div>
                           <div className="sos-detail-field">
-                            <span className="sos-detail-label">
-                              Phone
-                            </span>
+                            <span className="sos-detail-label">Phone</span>
                             <span className="sos-detail-value">
                               {selectedSOS.volunteerPhone || "—"}
                             </span>

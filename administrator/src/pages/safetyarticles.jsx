@@ -78,9 +78,12 @@ function SafetyArticles() {
 
       const article = response.data;
 
-      document.getElementById("viewArticleImage").src = article.image
-        ? `http://localhost:3000/articles/${article.image}`
-        : "";
+      const viewImage = document.getElementById("viewArticleImage");
+      if (article.image) {
+        viewImage.src = `http://localhost:3000/articles/${article.image}`;
+      } else {
+        viewImage.removeAttribute("src");
+      }
 
       document.getElementById("viewArticleTitle").innerText = article.title;
 
@@ -136,7 +139,7 @@ function SafetyArticles() {
     document.getElementById("articleContent").value = "";
 
     const imagePreview = document.getElementById("articleImagePreview");
-    imagePreview.src = "";
+    imagePreview.removeAttribute("src");
     document.getElementById("articleImagePreviewBox").style.display = "none";
 
     document.getElementById("articleFormModal").style.display = "flex";
@@ -167,7 +170,7 @@ function SafetyArticles() {
         document.getElementById("articleImagePreviewBox").style.display =
           "block";
       } else {
-        document.getElementById("articleImagePreview").src = "";
+        document.getElementById("articleImagePreview").removeAttribute("src");
         document.getElementById("articleImagePreviewBox").style.display =
           "none";
       }
@@ -197,7 +200,15 @@ function SafetyArticles() {
       return;
     }
     try {
-      await axios.delete(`http://localhost:3000/api/deletesafetyarticle/${id}`);
+      const data = JSON.parse(sessionStorage.getItem("mydata"));
+      await axios.delete(
+        `http://localhost:3000/api/deletesafetyarticle/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${data.token}`,
+          },
+        },
+      );
       await Swal.fire({
         title: "Deleted!",
         text: "Safety article deleted successfully.",
@@ -321,6 +332,7 @@ function SafetyArticles() {
 
     try {
       const formData = new FormData();
+      const data = JSON.parse(sessionStorage.getItem("mydata"));
 
       formData.append("title", articleData.title);
       formData.append("category", articleData.category);
@@ -339,6 +351,11 @@ function SafetyArticles() {
         await axios.put(
           `http://localhost:3000/api/editsafetyarticle/${articleId}`,
           formData,
+          {
+            headers: {
+              Authorization: `Bearer ${data.token}`,
+            },
+          },
         );
 
         alert("Article updated as draft successfully.");
@@ -347,6 +364,11 @@ function SafetyArticles() {
         await axios.post(
           "http://localhost:3000/api/addsafetyarticle",
           formData,
+          {
+            headers: {
+              Authorization: `Bearer ${data.token}`,
+            },
+          },
         );
         alert("Article saved as draft successfully.");
       }
@@ -371,6 +393,7 @@ function SafetyArticles() {
 
     try {
       const formData = new FormData();
+      const data = JSON.parse(sessionStorage.getItem("mydata"));
 
       formData.append("title", articleData.title);
       formData.append("category", articleData.category);
@@ -389,6 +412,11 @@ function SafetyArticles() {
         await axios.put(
           `http://localhost:3000/api/editsafetyarticle/${articleId}`,
           formData,
+          {
+            headers: {
+              Authorization: `Bearer ${data.token}`,
+            },
+          },
         );
 
         alert("Article published successfully.");
@@ -397,6 +425,11 @@ function SafetyArticles() {
         await axios.post(
           "http://localhost:3000/api/addsafetyarticle",
           formData,
+          {
+            headers: {
+              Authorization: `Bearer ${data.token}`,
+            },
+          },
         );
 
         alert("Article published successfully.");
@@ -706,7 +739,7 @@ function SafetyArticles() {
 
             <img
               id="viewArticleImage"
-              src=""
+              src={null}
               alt="Article"
               style={{
                 width: "100%",
@@ -884,7 +917,7 @@ function SafetyArticles() {
               <div>
                 <img
                   id="articleImagePreview"
-                  src=""
+                  src={null}
                   alt="Preview"
                   style={{
                     width: "180px",

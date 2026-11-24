@@ -17,10 +17,23 @@ function Profile() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const getVolunteerData = () => {
+    const storedData =
+      localStorage.getItem("mydata") || sessionStorage.getItem("mydata");
+    return storedData ? JSON.parse(storedData) : null;
+  };
+
   const fetchVolunteerProfile = async (userId) => {
     try {
+      const storedData = getVolunteerData();
+      const token = storedData?.token;
       const response = await Axios.get(
         `http://localhost:3000/api/getvolunteerprofile/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
       );
 
       setVolunteer(response.data);
@@ -40,9 +53,9 @@ function Profile() {
   };
 
   useEffect(() => {
-    const storedData = sessionStorage.getItem("mydata");
+    const volunteerData = getVolunteerData();
 
-    if (!storedData) {
+    if (!volunteerData) {
       Swal.fire({
         icon: "error",
         title: "Session Expired",
@@ -54,8 +67,6 @@ function Profile() {
 
       return;
     }
-
-    const volunteerData = JSON.parse(storedData);
 
     if (!volunteerData.user_id) {
       Swal.fire({
@@ -141,8 +152,9 @@ function Profile() {
   // Save Profile Changes
   const handleSaveProfile = () => {
     if (isSaving) return;
-    const storedData = sessionStorage.getItem("mydata");
-    if (!storedData) {
+    const volunteerData = getVolunteerData();
+
+    if (!volunteerData) {
       Swal.fire({
         icon: "error",
         title: "Session Expired",
@@ -153,7 +165,6 @@ function Profile() {
       return;
     }
 
-    const volunteerData = JSON.parse(storedData);
     if (!volunteerData.user_id) {
       Swal.fire({
         icon: "error",
@@ -370,6 +381,11 @@ function Profile() {
         serviceArea,
         reason,
       },
+      {
+        headers: {
+          Authorization: `Bearer ${volunteerData.token}`,
+        },
+      },
     )
       .then(async (response) => {
         if (newPassword) {
@@ -379,6 +395,11 @@ function Profile() {
               {
                 currentPassword: currentPassword,
                 password: newPassword,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${volunteerData.token}`,
+                },
               },
             );
           } catch (passwordError) {
@@ -403,6 +424,11 @@ function Profile() {
             await Axios.put(
               `http://localhost:3000/api/updatevolunteerphoto/${volunteerData.user_id}`,
               formData,
+              {
+                headers: {
+                  Authorization: `Bearer ${volunteerData.token}`,
+                },
+              },
             );
           } catch (photoError) {
             console.log("Profile photo upload error:", photoError);

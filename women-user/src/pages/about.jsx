@@ -263,11 +263,9 @@ function About() {
       {/* ================= FINAL CTA ================= */}
       <section className="about-final-cta">
         <div className="cta-overlay"></div>
-
         <div className="container">
           <div className="cta-content">
             <span className="about-tag">SAFEHER</span>
-
             <h2>
               Stay Aware.
               <br />
@@ -275,12 +273,10 @@ function About() {
               <br />
               Stay <span>Safe.</span>
             </h2>
-
             <p>
               Join SafeHer and take a step towards a more connected safety
               experience.
             </p>
-
             <a href="/register" className="about-primary-btn">
               Get Started
               <i className="fa-solid fa-arrow-right"></i>

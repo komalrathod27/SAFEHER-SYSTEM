@@ -9,12 +9,16 @@ function MyReports() {
   React.useEffect(() => {
     const mydata = JSON.parse(localStorage.getItem("mydata"));
 
-    if (!mydata || !mydata.user_id) {
+    if (!mydata || !mydata.user_id || !mydata.token) {
       return;
     }
 
     axios
-      .get(`http://localhost:3000/api/getmyincidentreports/${mydata.user_id}`)
+      .get(`http://localhost:3000/api/getmyincidentreports/${mydata.user_id}`, {
+        headers: {
+          Authorization: `Bearer ${mydata.token}`,
+        },
+      })
       .then((response) => {
         setReports(response.data);
       })

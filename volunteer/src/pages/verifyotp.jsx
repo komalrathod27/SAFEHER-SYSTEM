@@ -1,15 +1,95 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import Swal from "sweetalert2";
+import Axios from "axios";
 
 function VerifyOTP() {
   const location = useLocation();
   const navigate = useNavigate();
-
-  const email = location.state?.email || "";
+  const email =
+    location.state?.email ||
+    sessionStorage.getItem("volunteer_forgot_password_email") ||
+    "";
+  const role = "volunteer";
+  const resetTokenKey = `safeher_reset_${role}_${email.toLowerCase()}`;
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
+  const [expiresAt, setExpiresAt] = useState(null);
+  const [cooldownUntil, setCooldownUntil] = useState(null);
+
+  const [otpStatus, setOtpStatus] = useState("loading");
+  const [attempts, setAttempts] = useState(0);
+  const [generationCount, setGenerationCount] = useState(0);
+
+  const [isStatusLoading, setIsStatusLoading] = useState(true);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+
+  // ================= UPDATE OTP STATUS =================
+  const updateOtpStatus = (data) => {
+    setOtpStatus(data.otpStatus || "not_requested");
+    setAttempts(data.attempts || 0);
+    setGenerationCount(data.generationCount || 0);
+    setExpiresAt(data.expiresAt || null);
+    setCooldownUntil(data.cooldownUntil || null);
+  };
+
+  // ================= FETCH OTP STATUS =================
+  const fetchOtpStatus = async () => {
+    try {
+      const response = await Axios.get(
+        "http://localhost:3000/api/forgot-password/status",
+        {
+          params: {
+            email: email.trim().toLowerCase(),
+            role,
+          },
+        },
+      );
+
+      const data = response.data;
+
+      if (!data.exists) {
+        setOtpStatus("not_requested");
+        setAttempts(0);
+        setGenerationCount(0);
+        setExpiresAt(null);
+        setCooldownUntil(null);
+        return data;
+      }
+
+      updateOtpStatus(data);
+
+      // Restore reset authorization after refreshing the page
+      if (data.otpStatus === "verified") {
+        const savedToken = sessionStorage.getItem(resetTokenKey);
+
+        if (savedToken) {
+          navigate("/resetpassword", {
+            replace: true,
+            state: {
+              email,
+              role,
+              resetToken: savedToken,
+            },
+          });
+        }
+      }
+
+      return data;
+    } catch (error) {
+      setOtpStatus("error");
+      console.error("Unable to fetch OTP status:", error);
+      throw error;
+    } finally {
+      setIsStatusLoading(false);
+    }
+  };
+
+  // ================= INITIAL OTP STATUS =================
   useEffect(() => {
     if (!email) {
       Swal.fire({
@@ -20,14 +100,56 @@ function VerifyOTP() {
       }).then(() => {
         navigate("/forgotpassword", { replace: true });
       });
+
+      return;
     }
+
+    sessionStorage.setItem("volunteer_forgot_password_email", email);
+
+    fetchOtpStatus().catch(() => {
+      Swal.fire({
+        icon: "error",
+        title: "Unable to Load Status",
+        text: "Unable to retrieve OTP status. Please try again.",
+        confirmButtonColor: "#16a085",
+      });
+    });
   }, [email, navigate]);
 
+  // ================= OTP & COOLDOWN TIMER =================
+  useEffect(() => {
+    const updateTimers = () => {
+      const now = Date.now();
+
+      const otpRemaining = expiresAt
+        ? Math.max(0, Math.ceil((new Date(expiresAt).getTime() - now) / 1000))
+        : 0;
+
+      const cooldownRemaining = cooldownUntil
+        ? Math.max(
+            0,
+            Math.ceil((new Date(cooldownUntil).getTime() - now) / 1000),
+          )
+        : 0;
+
+      setSecondsLeft(otpRemaining);
+      setCooldownSeconds(cooldownRemaining);
+    };
+
+    updateTimers();
+
+    const timer = setInterval(updateTimers, 1000);
+
+    return () => clearInterval(timer);
+  }, [expiresAt, cooldownUntil]);
+
+  // ================= OTP INPUT CHANGE =================
   const handleOtpChange = (value, index) => {
     const digit = value.replace(/\D/g, "").slice(-1);
 
     const updatedOtp = [...otp];
     updatedOtp[index] = digit;
+
     setOtp(updatedOtp);
 
     if (digit && index < 5) {
@@ -35,12 +157,14 @@ function VerifyOTP() {
     }
   };
 
+  // ================= BACKSPACE NAVIGATION =================
   const handleKeyDown = (event, index) => {
     if (event.key === "Backspace" && !otp[index] && index > 0) {
       document.getElementById(`vol-otp-${index - 1}`)?.focus();
     }
   };
 
+  // ================= PASTE OTP =================
   const handlePaste = (event) => {
     event.preventDefault();
 
@@ -60,10 +184,12 @@ function VerifyOTP() {
     setOtp(updatedOtp);
 
     const focusIndex = Math.min(pastedDigits.length, 5);
+
     document.getElementById(`vol-otp-${focusIndex}`)?.focus();
   };
 
-  const handleVerify = (event) => {
+  // ================= VERIFY OTP =================
+  const handleVerify = async (event) => {
     event.preventDefault();
 
     if (!email) {
@@ -76,61 +202,144 @@ function VerifyOTP() {
       return;
     }
 
+    if (isStatusLoading || otpStatus !== "pending" || secondsLeft <= 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "OTP Unavailable",
+        text: "Your OTP is expired or unavailable. Please request a new one.",
+        confirmButtonColor: "#16a085",
+      });
+      return;
+    }
+
     const enteredOtp = otp.join("");
-
-    if (!enteredOtp) {
-      Swal.fire({
-        icon: "warning",
-        title: "OTP Required",
-        text: "Please enter your OTP.",
-        confirmButtonColor: "#16a085",
-      });
-      return;
-    }
-
-    if (enteredOtp.length !== 6) {
-      Swal.fire({
-        icon: "warning",
-        title: "Incomplete OTP",
-        text: "Please enter all 6 digits.",
-        confirmButtonColor: "#16a085",
-      });
-      return;
-    }
 
     if (!/^\d{6}$/.test(enteredOtp)) {
       Swal.fire({
         icon: "warning",
         title: "Invalid OTP",
-        text: "OTP must contain exactly 6 digits.",
+        text: "Please enter all 6 digits of your OTP.",
         confirmButtonColor: "#16a085",
       });
       return;
     }
 
-    // Frontend only: actual OTP verification will be added with backend.
-    navigate("/resetpassword", {
-      state: { email, otp: enteredOtp },
-    });
+    if (isVerifying) return;
+
+    setIsVerifying(true);
+
+    try {
+      const response = await Axios.post(
+        "http://localhost:3000/api/forgot-password/verify-otp",
+        {
+          email: email.trim().toLowerCase(),
+          role,
+          otp: enteredOtp,
+        },
+      );
+
+      const resetToken = response.data.resetToken;
+
+      if (!resetToken) {
+        throw new Error("Password reset authorization was not received.");
+      }
+
+      // Save reset token separately from the login session
+      sessionStorage.setItem(resetTokenKey, resetToken);
+
+      await Swal.fire({
+        icon: "success",
+        title: "OTP Verified",
+        text: "Your OTP has been verified successfully.",
+        confirmButtonColor: "#16a085",
+      });
+
+      navigate("/resetpassword", {
+        state: {
+          email,
+          role,
+          resetToken,
+        },
+      });
+    } catch (error) {
+      setOtp(["", "", "", "", "", ""]);
+
+      try {
+        await fetchOtpStatus();
+      } catch (statusError) {
+        console.error("Unable to refresh OTP status:", statusError);
+      }
+
+      Swal.fire({
+        icon: "error",
+        title: "Verification Failed",
+        text:
+          error.response?.data?.message ||
+          error.message ||
+          "Unable to verify OTP. Please try again.",
+        confirmButtonColor: "#16a085",
+      });
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
-  const handleResendOtp = () => {
-    if (!email) {
-      Swal.fire({
-        icon: "warning",
-        title: "Email Missing",
-        text: "Please enter your email first.",
-        confirmButtonColor: "#16a085",
-      });
+  // ================= RESEND OTP =================
+  const handleResendOtp = async () => {
+    if (
+      !email ||
+      isResending ||
+      isStatusLoading ||
+      secondsLeft > 0 ||
+      cooldownSeconds > 0 ||
+      otpStatus === "verified"
+    ) {
       return;
     }
 
-    Swal.fire({
-      icon: "info",
-      title: "Coming Soon",
-      text: "OTP resend functionality will be available after backend integration.",
-      confirmButtonColor: "#16a085",
-    });
+    setIsResending(true);
+
+    try {
+      const response = await Axios.post(
+        "http://localhost:3000/api/forgot-password/send-otp",
+        {
+          email: email.trim().toLowerCase(),
+          role,
+        },
+      );
+
+      updateOtpStatus(response.data);
+
+      setOtp(["", "", "", "", "", ""]);
+
+      await Swal.fire({
+        icon: "success",
+        title: "OTP Sent",
+        text:
+          response.data.message ||
+          "A new verification code has been sent to your email.",
+        confirmButtonColor: "#16a085",
+      });
+
+      document.getElementById("vol-otp-0")?.focus();
+    } catch (error) {
+      try {
+        await fetchOtpStatus();
+      } catch (statusError) {
+        console.error("Unable to refresh OTP status:", statusError);
+      }
+
+      Swal.fire({
+        icon: "error",
+        title: "Unable to Resend OTP",
+        text:
+          error.response?.data?.message ||
+          "Something went wrong. Please try again later.",
+        confirmButtonColor: "#16a085",
+      });
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -268,6 +477,11 @@ function VerifyOTP() {
           text-decoration: none;
         }
 
+        .verify-otp-resend button:disabled {
+          color: #a0aaa6;
+          cursor: not-allowed;
+        }
+
         .verify-otp-back:hover {
           color: #0d755e;
         }
@@ -311,22 +525,93 @@ function VerifyOTP() {
                 onKeyDown={(event) => handleKeyDown(event, index)}
                 onPaste={index === 0 ? handlePaste : undefined}
                 aria-label={`OTP digit ${index + 1}`}
+                disabled={
+                  isStatusLoading ||
+                  otpStatus !== "pending" ||
+                  secondsLeft <= 0 ||
+                  isVerifying
+                }
               />
             ))}
           </div>
 
-          <button type="submit" className="verify-otp-button">
-            Verify OTP
+          <p
+            style={{
+              textAlign: "center",
+              color: secondsLeft === 0 ? "#e74c3c" : "#71847e",
+              fontSize: "13px",
+              marginBottom: "10px",
+            }}
+          >
+            {isStatusLoading
+              ? "Checking OTP status..."
+              : otpStatus === "error"
+                ? "Unable to check OTP status."
+                : cooldownSeconds > 0
+                  ? "Maximum OTP limit reached. Please try again after 24 hours."
+                  : secondsLeft > 0
+                    ? `OTP expires in 00:${String(secondsLeft).padStart(2, "0")}`
+                    : otpStatus === "locked"
+                      ? "Maximum attempts reached. Request a new OTP."
+                      : otpStatus === "verified"
+                        ? "OTP already verified."
+                        : "OTP expired. Please request a new one."}
+          </p>
+
+          <p
+            style={{
+              textAlign: "center",
+              color: "#71847e",
+              fontSize: "12px",
+              marginBottom: "18px",
+            }}
+          >
+            Attempts used: {attempts}/5
+          </p>
+
+          <button
+            type="submit"
+            className="verify-otp-button"
+            disabled={
+              isStatusLoading ||
+              otpStatus !== "pending" ||
+              secondsLeft <= 0 ||
+              isVerifying
+            }
+          >
+            {isVerifying ? "Verifying..." : "Verify OTP"}
           </button>
         </form>
 
         <div className="verify-otp-resend">
-          Didn't receive the code?{" "}
-          <button type="button" onClick={handleResendOtp}>
-            Resend OTP
-          </button>
+          {cooldownSeconds > 0 ? (
+            <>
+              Maximum OTP limit reached. Try again after{" "}
+              <strong>
+                {Math.floor(cooldownSeconds / 3600)}h{" "}
+                {Math.floor((cooldownSeconds % 3600) / 60)}m{" "}
+                {cooldownSeconds % 60}s
+              </strong>
+            </>
+          ) : (
+            <>
+              Didn't receive the code?{" "}
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={
+                  isStatusLoading ||
+                  isResending ||
+                  secondsLeft > 0 ||
+                  cooldownSeconds > 0 ||
+                  otpStatus === "verified"
+                }
+              >
+                {isResending ? "Sending..." : "Resend OTP"}
+              </button>
+            </>
+          )}
         </div>
-
         <Link to="/forgotpassword" className="verify-otp-back">
           ← Back to Forgot Password
         </Link>

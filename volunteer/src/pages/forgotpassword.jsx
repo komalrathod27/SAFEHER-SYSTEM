@@ -1,15 +1,17 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Swal from "sweetalert2";
+import Axios from "axios";
 
 function ForgotPassword() {
   const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
 
     if (!trimmedEmail) {
       Swal.fire({
@@ -33,9 +35,62 @@ function ForgotPassword() {
       return;
     }
 
-    navigate("/verifyotp", {
-      state: { email: trimmedEmail },
-    });
+    if (isLoading) return;
+
+    setIsLoading(true);
+
+    try {
+      const response = await Axios.post(
+        "http://localhost:3000/api/forgot-password/send-otp",
+        {
+          email: trimmedEmail,
+          role: "volunteer",
+        },
+      );
+
+      Swal.fire({
+        icon: "success",
+        title: "OTP Sent",
+        text: response.data.message || "Please check your email for the OTP.",
+        confirmButtonColor: "#16a085",
+      }).then(() => {
+        navigate("/verifyotp", {
+          state: {
+            email: trimmedEmail,
+            role: "volunteer",
+          },
+        });
+      });
+    } catch (error) {
+      const remainingSeconds = error.response?.data?.remainingSeconds;
+      let remainingTime = "";
+
+      if (typeof remainingSeconds === "number") {
+        const days = Math.floor(remainingSeconds / 86400);
+        const hours = Math.floor((remainingSeconds % 86400) / 3600);
+        const minutes = Math.floor((remainingSeconds % 3600) / 60);
+        const seconds = remainingSeconds % 60;
+
+        if (days > 0) remainingTime += `${days}d `;
+        if (hours > 0) remainingTime += `${hours}h `;
+        if (minutes > 0) remainingTime += `${minutes}m `;
+        if (seconds > 0 || !remainingTime) remainingTime += `${seconds}s`;
+      }
+      const isCooldownActive = error.response?.status === 429;
+      Swal.fire({
+        icon: isCooldownActive ? "warning" : "error",
+        title: isCooldownActive
+          ? "Maximum OTP Limit Reached"
+          : "Unable to Send OTP",
+        text: isCooldownActive
+          ? `You have reached the maximum OTP generation limit. Please try again after ${remainingTime}.`
+          : error.response?.data?.message ||
+            "Something went wrong. Please try again later.",
+        confirmButtonColor: "#16a085",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -187,8 +242,12 @@ function ForgotPassword() {
             />
           </div>
 
-          <button type="submit" className="forgot-password-button">
-            Continue
+          <button
+            type="submit"
+            className="forgot-password-button"
+            disabled={isLoading}
+          >
+            {isLoading ? "Sending OTP..." : "Continue"}
           </button>
         </form>
 

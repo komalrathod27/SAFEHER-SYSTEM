@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Swal from "sweetalert2";
 import Axios from "axios";
 import { indianStates, cityList } from "../data/locationdata";
+import "../safeher-css/register.css";
 
 function Register() {
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +28,7 @@ function Register() {
   const handleCreateAccount = (e) => {
     e.preventDefault();
     if (isLoading) return;
+
     // Get values using ID
     const fullName = document.getElementById("fullName").value.trim();
     const email = document.getElementById("email").value.trim().toLowerCase();
@@ -144,7 +146,7 @@ function Register() {
       return;
     }
 
-    // Date of Birth Validation
+    // Validate Date of Birth
     const [year, month, day] = dob.split("-").map(Number);
     const dobDate = new Date(year, month - 1, day);
     const today = new Date();
@@ -326,613 +328,313 @@ function Register() {
   };
 
   return (
-    <>
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "linear-gradient(135deg, #f5f9ff 0%, #fff5fa 100%)",
-          padding: "50px 20px",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "1050px",
-            margin: "0 auto",
-          }}
-        >
-          {/* Registration Card */}
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: "18px",
-              padding: "40px 45px",
-              boxShadow: "0 12px 40px rgba(35,55,90,0.10)",
-              border: "1px solid #edf0f6",
-            }}
-          >
-            {/* Form Heading */}
-            <div
-              style={{
-                marginBottom: "30px",
-                borderBottom: "1px solid #edf0f5",
-                paddingBottom: "20px",
-              }}
-            >
-              <h2
-                style={{
-                  margin: "0 0 7px",
-                  color: "#172b62",
-                  fontSize: "25px",
-                  fontWeight: "650",
-                  textAlign: "center",
-                }}
-              >
-                Create Your SafeHer Account
-              </h2>
+    <div className="woman-register-page">
+      <div className="woman-register-container">
+        <div className="woman-register-card">
+          {/* Form Heading */}
+          <div className="woman-register-heading">
+            <h2>Create Your SafeHer Account</h2>
 
-              <p
-                style={{
-                  margin: "0",
-                  color: "#7b8497",
-                  fontSize: "14px",
-                  textAlign: "center",
-                }}
-              >
-                Register to access the SafeHer community safety platform.
-              </p>
+            <p>Register to access the SafeHer community safety platform.</p>
+          </div>
+
+          <form id="registerForm" onSubmit={handleCreateAccount}>
+            {/* Full Name */}
+            <div className="row">
+              <div className="col-lg-12">
+                <div className="form-group">
+                  <label>Full Name</label>
+
+                  <input
+                    type="text"
+                    id="fullName"
+                    className="form-control"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+              </div>
             </div>
 
-            <form id="registerForm" onSubmit={handleCreateAccount}>
-              {/* Full Name */}
-              <div className="row">
-                <div className="col-lg-12">
-                  <div className="form-group" style={{ marginBottom: "22px" }}>
-                    <label
-                      style={{
-                        color: "#26385f",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        display: "block",
-                      }}
-                    >
-                      Full Name
-                    </label>
+            {/* Email + Password */}
+            <div className="row">
+              <div className="col-lg-6">
+                <div className="form-group">
+                  <label>Email Address</label>
 
-                    <input
-                      type="text"
-                      id="fullName"
-                      className="form-control"
-                      placeholder="Enter your full name"
-                      style={{
-                        height: "48px",
-                        borderRadius: "8px",
-                        border: "1px solid #dce2ec",
-                        padding: "10px 14px",
-                      }}
-                    />
-                  </div>
+                  <input
+                    type="email"
+                    id="email"
+                    className="form-control"
+                    placeholder="Enter your email"
+                  />
                 </div>
               </div>
 
-              {/* Email + Password */}
-              <div className="row">
-                <div className="col-lg-6">
-                  <div className="form-group" style={{ marginBottom: "22px" }}>
-                    <label
-                      style={{
-                        color: "#26385f",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        display: "block",
-                      }}
-                    >
-                      Email Address
-                    </label>
+              <div className="col-lg-6">
+                <div className="form-group">
+                  <label>Password</label>
 
+                  <div className="woman-register-password-wrapper">
                     <input
-                      type="email"
-                      id="email"
+                      type={showPassword ? "text" : "password"}
+                      id="password"
                       className="form-control"
-                      placeholder="Enter your email"
-                      style={{
-                        height: "48px",
-                        borderRadius: "8px",
-                        border: "1px solid #dce2ec",
-                        padding: "10px 14px",
-                      }}
+                      placeholder="Enter your password"
+                      value={passwordValue}
+                      onChange={(e) => setPasswordValue(e.target.value)}
                     />
-                  </div>
-                </div>
 
-                <div className="col-lg-6">
-                  <div className="form-group" style={{ marginBottom: "22px" }}>
-                    <label
-                      style={{
-                        color: "#26385f",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        display: "block",
-                      }}
+                    <button
+                      type="button"
+                      className="woman-register-show-password"
+                      onClick={() => setShowPassword(!showPassword)}
                     >
-                      Password
-                    </label>
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
 
-                    <div style={{ position: "relative" }}>
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        id="password"
-                        className="form-control"
-                        placeholder="Enter your password"
-                        value={passwordValue}
-                        onChange={(e) => setPasswordValue(e.target.value)}
-                        style={{
-                          height: "48px",
-                          borderRadius: "8px",
-                          border: "1px solid #dce2ec",
-                          padding: "10px 65px 10px 14px",
-                        }}
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        style={{
-                          position: "absolute",
-                          right: "12px",
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          border: "none",
-                          background: "transparent",
-                          color: "#287df5",
-                          cursor: "pointer",
-                          fontWeight: "600",
-                        }}
-                      >
-                        {showPassword ? "Hide" : "Show"}
-                      </button>
-                    </div>
-
-                    {passwordValue && (
-                      <div style={{ marginTop: "10px" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "5px",
-                            marginBottom: "8px",
-                          }}
-                        >
-                          {[1, 2, 3, 4, 5, 6].map((item) => (
-                            <div
-                              key={item}
-                              style={{
-                                height: "5px",
-                                flex: 1,
-                                borderRadius: "5px",
-                                background:
-                                  item <= passwordStrength
-                                    ? passwordStrength <= 2
-                                      ? "#e74c3c"
-                                      : passwordStrength <= 4
-                                        ? "#f39c12"
-                                        : "#27ae60"
-                                    : "#e5e7eb",
-                              }}
-                            />
-                          ))}
-                        </div>
-
-                        <small
-                          style={{
-                            color:
-                              passwordStrength <= 2
-                                ? "#e74c3c"
-                                : passwordStrength <= 4
-                                  ? "#f39c12"
-                                  : "#27ae60",
-                            fontWeight: "600",
-                          }}
-                        >
-                          Password Strength:{" "}
-                          {passwordStrength <= 2
-                            ? "Weak"
-                            : passwordStrength <= 4
-                              ? "Medium"
-                              : passwordStrength === 5
-                                ? "Strong"
-                                : "Very Strong"}
-                        </small>
+                  {passwordValue && (
+                    <div className="woman-register-strength">
+                      <div className="woman-register-strength-bars">
+                        {[1, 2, 3, 4, 5, 6].map((item) => (
+                          <div
+                            key={item}
+                            style={{
+                              background:
+                                item <= passwordStrength
+                                  ? passwordStrength <= 2
+                                    ? "#e74c3c"
+                                    : passwordStrength <= 4
+                                      ? "#f39c12"
+                                      : "#27ae60"
+                                  : "#e5e7eb",
+                            }}
+                          />
+                        ))}
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              {/* Contact + Gender */}
-              <div className="row">
-                <div className="col-lg-6">
-                  <div className="form-group" style={{ marginBottom: "22px" }}>
-                    <label
-                      style={{
-                        color: "#26385f",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        display: "block",
-                      }}
-                    >
-                      Contact Number
-                    </label>
-
-                    <input
-                      type="tel"
-                      id="phoneNumber"
-                      className="form-control"
-                      placeholder="Enter 10 digit number"
-                      style={{
-                        height: "48px",
-                        borderRadius: "8px",
-                        border: "1px solid #dce2ec",
-                        padding: "10px 14px",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="col-lg-6">
-                  <div className="form-group" style={{ marginBottom: "22px" }}>
-                    <label
-                      style={{
-                        color: "#26385f",
-                        fontWeight: "600",
-                        marginBottom: "10px",
-                        display: "block",
-                      }}
-                    >
-                      Gender
-                    </label>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "25px",
-                        height: "48px",
-                      }}
-                    >
-                      <label
+                      <small
+                        className="woman-register-strength-text"
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "7px",
-                          margin: 0,
-                          color: "#555f72",
+                          color:
+                            passwordStrength <= 2
+                              ? "#e74c3c"
+                              : passwordStrength <= 4
+                                ? "#f39c12"
+                                : "#27ae60",
                         }}
                       >
-                        <input type="radio" name="gender" value="female" />
-                        Female
-                      </label>
-
-                      <label
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "7px",
-                          margin: 0,
-                          color: "#555f72",
-                        }}
-                      >
-                        <input type="radio" name="gender" value="male" />
-                        Male
-                      </label>
-
-                      <label
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "7px",
-                          margin: 0,
-                          color: "#555f72",
-                        }}
-                      >
-                        <input type="radio" name="gender" value="other" />
-                        Other
-                      </label>
+                        Password Strength:{" "}
+                        {passwordStrength <= 2
+                          ? "Weak"
+                          : passwordStrength <= 4
+                            ? "Medium"
+                            : passwordStrength === 5
+                              ? "Strong"
+                              : "Very Strong"}
+                      </small>
                     </div>
-                  </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Contact + Gender */}
+            <div className="row">
+              <div className="col-lg-6">
+                <div className="form-group">
+                  <label>Contact Number</label>
+
+                  <input
+                    type="tel"
+                    id="phoneNumber"
+                    className="form-control"
+                    placeholder="Enter 10 digit number"
+                  />
                 </div>
               </div>
 
-              {/* Date of Birth + City */}
-              <div className="row">
-                <div className="col-lg-6">
-                  <div className="form-group" style={{ marginBottom: "22px" }}>
-                    <label
-                      style={{
-                        color: "#26385f",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        display: "block",
-                      }}
-                    >
-                      Date of Birth
+              <div className="col-lg-6">
+                <div className="form-group">
+                  <label>Gender</label>
+
+                  <div className="woman-register-gender-options">
+                    <label>
+                      <input type="radio" name="gender" value="female" />
+                      Female
                     </label>
 
-                    <input
-                      type="date"
-                      id="dob"
-                      className="form-control"
-                      style={{
-                        height: "48px",
-                        borderRadius: "8px",
-                        border: "1px solid #dce2ec",
-                        padding: "10px 14px",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="col-lg-6">
-                  <div className="form-group" style={{ marginBottom: "22px" }}>
-                    <label
-                      style={{
-                        color: "#26385f",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        display: "block",
-                      }}
-                    >
-                      City
+                    <label>
+                      <input type="radio" name="gender" value="male" />
+                      Male
                     </label>
 
-                    {selectedCity === "Other" ? (
-                      <input
-                        type="text"
-                        id="city"
-                        className="form-control"
-                        placeholder="Enter your city"
-                        value={otherCity}
-                        onChange={(e) => setOtherCity(e.target.value)}
-                        maxLength={60}
-                        style={{
-                          height: "48px",
-                          borderRadius: "8px",
-                          border: "1px solid #dce2ec",
-                          padding: "10px 14px",
-                        }}
-                      />
-                    ) : (
-                      <select
-                        id="city"
-                        className="form-control"
-                        value={selectedCity}
-                        onChange={(e) => {
-                          setSelectedCity(e.target.value);
-                          setOtherCity("");
-                        }}
-                        style={{
-                          height: "48px",
-                          borderRadius: "8px",
-                          border: "1px solid #dce2ec",
-                          padding: "10px 14px",
-                        }}
-                      >
-                        <option value="">Select City</option>
-
-                        {cityList.map((cityName) => (
-                          <option key={cityName} value={cityName}>
-                            {cityName}
-                          </option>
-                        ))}
-                        <option value="Other">Other</option>
-                      </select>
-                    )}
+                    <label>
+                      <input type="radio" name="gender" value="other" />
+                      Other
+                    </label>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* State + Pincode */}
-              <div className="row">
-                <div className="col-lg-6">
-                  <div className="form-group" style={{ marginBottom: "22px" }}>
-                    <label
-                      style={{
-                        color: "#26385f",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        display: "block",
-                      }}
-                    >
-                      State
-                    </label>
+            {/* Date of Birth + City */}
+            <div className="row">
+              <div className="col-lg-6">
+                <div className="form-group">
+                  <label>Date of Birth</label>
 
-                    {selectedState === "Other" ? (
-                      <input
-                        type="text"
-                        id="state"
-                        className="form-control"
-                        placeholder="Enter your state"
-                        value={otherState}
-                        onChange={(e) => setOtherState(e.target.value)}
-                        maxLength={60}
-                        style={{
-                          height: "48px",
-                          borderRadius: "8px",
-                          border: "1px solid #dce2ec",
-                          padding: "10px 14px",
-                        }}
-                      />
-                    ) : (
-                      <select
-                        id="state"
-                        className="form-control"
-                        value={selectedState}
-                        onChange={(e) => {
-                          setSelectedState(e.target.value);
-                          setOtherState("");
-                        }}
-                        style={{
-                          height: "48px",
-                          borderRadius: "8px",
-                          border: "1px solid #dce2ec",
-                          padding: "10px 14px",
-                        }}
-                      >
-                        <option value="">Select State</option>
-
-                        {indianStates.map((stateName) => (
-                          <option key={stateName} value={stateName}>
-                            {stateName}
-                          </option>
-                        ))}
-
-                        <option value="Other">Other</option>
-                      </select>
-                    )}
-                  </div>
+                  <input type="date" id="dob" className="form-control" />
                 </div>
+              </div>
 
-                <div className="col-lg-6">
-                  <div className="form-group" style={{ marginBottom: "22px" }}>
-                    <label
-                      style={{
-                        color: "#26385f",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        display: "block",
-                      }}
-                    >
-                      Pincode
-                    </label>
+              <div className="col-lg-6">
+                <div className="form-group">
+                  <label>City</label>
 
+                  {selectedCity === "Other" ? (
                     <input
                       type="text"
-                      id="pincode"
+                      id="city"
                       className="form-control"
-                      placeholder="Enter 6 digit pincode"
-                      style={{
-                        width: "100%",
-                        height: "48px",
-                        borderRadius: "8px",
-                        border: "1px solid #dce2ec",
-                        padding: "10px 14px",
-                        boxSizing: "border-box",
-                      }}
+                      placeholder="Enter your city"
+                      value={otherCity}
+                      onChange={(e) => setOtherCity(e.target.value)}
+                      maxLength={60}
                     />
-                  </div>
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="row">
-                <div className="col-lg-12">
-                  <div className="form-group" style={{ marginBottom: "22px" }}>
-                    <label
-                      style={{
-                        color: "#26385f",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        display: "block",
-                      }}
-                    >
-                      Address
-                    </label>
-
-                    <textarea
-                      id="address"
+                  ) : (
+                    <select
+                      id="city"
                       className="form-control"
-                      rows="3"
-                      placeholder="Enter your complete address"
-                      style={{
-                        borderRadius: "8px",
-                        border: "1px solid #dce2ec",
-                        padding: "12px 14px",
-                        resize: "vertical",
-                      }}
-                    ></textarea>
-                  </div>
-                </div>
-              </div>
-
-              {/* Profile Photo */}
-              <div className="row">
-                <div className="col-lg-12">
-                  <div className="form-group" style={{ marginBottom: "28px" }}>
-                    <label
-                      style={{
-                        color: "#26385f",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        display: "block",
+                      value={selectedCity}
+                      onChange={(e) => {
+                        setSelectedCity(e.target.value);
+                        setOtherCity("");
                       }}
                     >
-                      Profile Photo
-                    </label>
+                      <option value="">Select City</option>
 
+                      {cityList.map((cityName) => (
+                        <option key={cityName} value={cityName}>
+                          {cityName}
+                        </option>
+                      ))}
+
+                      <option value="Other">Other</option>
+                    </select>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* State + Pincode */}
+            <div className="row">
+              <div className="col-lg-6">
+                <div className="form-group">
+                  <label>State</label>
+
+                  {selectedState === "Other" ? (
                     <input
-                      type="file"
-                      id="profilephoto"
+                      type="text"
+                      id="state"
                       className="form-control"
-                      accept=".jpg,.jpeg,.png"
-                      style={{
-                        height: "48px",
-                        borderRadius: "8px",
-                        border: "1px solid #dce2ec",
-                        padding: "8px 12px",
-                      }}
+                      placeholder="Enter your state"
+                      value={otherState}
+                      onChange={(e) => setOtherState(e.target.value)}
+                      maxLength={60}
                     />
-                  </div>
+                  ) : (
+                    <select
+                      id="state"
+                      className="form-control"
+                      value={selectedState}
+                      onChange={(e) => {
+                        setSelectedState(e.target.value);
+                        setOtherState("");
+                      }}
+                    >
+                      <option value="">Select State</option>
+
+                      {indianStates.map((stateName) => (
+                        <option key={stateName} value={stateName}>
+                          {stateName}
+                        </option>
+                      ))}
+
+                      <option value="Other">Other</option>
+                    </select>
+                  )}
                 </div>
               </div>
 
-              {/* Create Account */}
-              <div style={{ textAlign: "center" }}>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  style={{
-                    border: "none",
-                    borderRadius: "25px",
-                    padding: "13px 38px",
-                    minWidth: "180px",
-                    background: "linear-gradient(90deg, #287df5, #e94b9b)",
-                    color: "#ffffff",
-                    fontSize: "15px",
-                    fontWeight: "600",
-                    boxShadow: "0 6px 18px rgba(40,125,245,0.20)",
-                    opacity: isLoading ? 0.7 : 1,
-                    cursor: isLoading ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {isLoading ? "Creating Account..." : "Create Account"}
-                </button>
-              </div>
-            </form>
+              <div className="col-lg-6">
+                <div className="form-group">
+                  <label>Pincode</label>
 
-            {/* Login */}
-            <p
-              style={{
-                textAlign: "center",
-                marginTop: "22px",
-                marginBottom: "0",
-                color: "#70798b",
-                fontSize: "14px",
-              }}
-            >
-              Already have an account?{" "}
-              <a
-                href="/login"
+                  <input
+                    type="text"
+                    id="pincode"
+                    className="form-control"
+                    placeholder="Enter 6 digit pincode"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Address */}
+            <div className="row">
+              <div className="col-lg-12">
+                <div className="form-group">
+                  <label>Address</label>
+
+                  <textarea
+                    id="address"
+                    className="form-control"
+                    rows="3"
+                    placeholder="Enter your complete address"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+
+            {/* Profile Photo */}
+            <div className="row">
+              <div className="col-lg-12">
+                <div className="form-group">
+                  <label>Profile Photo</label>
+
+                  <input
+                    type="file"
+                    id="profilephoto"
+                    className="form-control"
+                    accept=".jpg,.jpeg,.png"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Create Account */}
+            <div className="woman-register-submit-wrapper">
+              <button
+                type="submit"
+                className="woman-register-submit"
+                disabled={isLoading}
                 style={{
-                  color: "#287df5",
-                  fontWeight: "600",
-                  textDecoration: "none",
+                  opacity: isLoading ? 0.7 : 1,
                 }}
               >
-                Login
-              </a>
-            </p>
-          </div>
+                {isLoading ? "Creating Account..." : "Create Account"}
+              </button>
+            </div>
+          </form>
+
+          {/* Login */}
+          <p className="woman-register-login">
+            Already have an account? <a href="/login">Login</a>
+          </p>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

@@ -23,11 +23,24 @@ import WomenReport from "./pages/womenreport.jsx";
 import VolunteerReport from "./pages/volunteerreport.jsx";
 import AdminLogin from "./pages/adminlogin";
 
+function hasAdminSession() {
+  try {
+    const session = JSON.parse(sessionStorage.getItem("mydata") || "null");
+    return Boolean(session?._id && session?.token);
+  } catch {
+    return false;
+  }
+}
+
 function Layout() {
   const location = useLocation();
 
   if (location.pathname === "/") {
     return <AdminLogin />;
+  }
+
+  if (!hasAdminSession()) {
+    return <Navigate to="/" replace state={{ from: location }} />;
   }
 
   return (
@@ -51,6 +64,7 @@ function Layout() {
             <Route path="/userreports" element={<UserReports />} />
             <Route path="/womenreport/:id" element={<WomenReport />} />
             <Route path="/volunteerreport/:id" element={<VolunteerReport />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
 
           <Footer />

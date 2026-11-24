@@ -1,0 +1,281 @@
+* {
+  box-sizing: border-box;
+}
+
+/* MAIN PAGE */
+
+.responses-page {
+  padding: 30px;
+  min-height: 100vh;
+  background: #f8f9fc;
+  font-family: Arial, sans-serif;
+}
+
+/* PAGE HEADING */
+
+.responses-title {
+  margin: 0;
+  color: #1f2937;
+  font-size: 28px;
+}
+
+.responses-subtitle {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* STATISTICS */
+
+.responses-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.responses-stat {
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 9px;
+}
+
+/* MAIN CARD */
+
+.responses-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* SEARCH AND FILTER */
+
+.responses-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 18px;
+}
+
+.responses-input {
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+}
+
+.responses-input:focus {
+  border-color: #6366f1;
+}
+
+/* TABLE */
+
+.responses-table-wrap {
+  overflow-x: auto;
+}
+
+.responses-table {
+  width: 100%;
+  min-width: 750px;
+  border-collapse: collapse;
+}
+
+.responses-table th {
+  padding: 13px;
+  text-align: left;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.responses-table td {
+  padding: 14px 13px;
+  border-top: 1px solid #eee;
+  font-size: 12px;
+  color: #374151;
+}
+
+.responses-table tbody tr:hover {
+  background: #fafafa;
+}
+
+/* STATUS BADGES */
+
+.responses-status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: Inter, Arial, sans-serif;
+  letter-spacing: 0.3px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  display: inline-block;
+  line-height: 1.4;
+}
+
+.responses-status-resolved {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.responses-status-rejected {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* BUTTONS */
+
+.responses-button {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 5px;
+  background: #eef2ff;
+  color: #4338ca;
+  cursor: pointer;
+}
+
+.responses-button:hover {
+  background: #e0e7ff;
+}
+
+/* LOADING AND ERROR */
+
+.responses-message {
+  padding: 30px;
+}
+
+.responses-error {
+  padding: 30px;
+  color: #dc2626;
+}
+
+/* MODAL OVERLAY */
+
+.responses-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 38, 31, 0.58);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+/* MODAL */
+
+.responses-modal {
+  width: 100%;
+  max-width: 600px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #dfeee8;
+  border-radius: 18px;
+  padding: 28px 32px;
+  box-shadow: 0 24px 70px rgba(18, 61, 53, 0.24);
+}
+
+.responses-modal h2 {
+  margin: 0 0 14px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8f0ed;
+  color: #123d35;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.responses-modal p {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f5f2;
+  color: #203c34;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.responses-modal strong {
+  flex: 0 0 105px;
+  color: #60756e;
+  font-weight: 600;
+}
+
+.responses-modal .responses-button {
+  min-width: 100px;
+  margin-top: 20px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #168568, #1f9a75);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(22, 133, 104, 0.2);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.responses-modal .responses-button:hover {
+  background: linear-gradient(135deg, #126f57, #168568);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(22, 133, 104, 0.28);
+}
+
+.responses-modal .responses-button:focus-visible {
+  outline: 3px solid rgba(22, 133, 104, 0.3);
+  outline-offset: 3px;
+}
+
+/* MOBILE */
+
+@media (max-width: 600px) {
+  .responses-page {
+    padding: 18px 12px;
+  }
+
+  .responses-title {
+    font-size: 24px;
+  }
+
+  .responses-stats {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .responses-toolbar {
+    padding: 14px;
+  }
+
+  .responses-input {
+    width: 100%;
+  }
+
+  .responses-modal {
+    padding: 22px 18px;
+    border-radius: 15px;
+  }
+
+  .responses-modal h2 {
+    font-size: 20px;
+  }
+
+  .responses-modal p {
+    gap: 8px;
+  }
+
+  .responses-modal strong {
+    flex-basis: 92px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .responses-modal .responses-button {
+    transition: none;
+  }
+}

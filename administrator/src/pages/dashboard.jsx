@@ -18,10 +18,13 @@ const API_BASE = "http://localhost:3000";
 
 function getAdminRequestConfig() {
   const session = JSON.parse(sessionStorage.getItem("mydata") || "null");
+  if (!session?.token) {
+    throw new Error("Admin token not found. Please login again.");
+  }
   return {
-    headers: session?.token
-      ? { Authorization: `Bearer ${session.token}` }
-      : {},
+    headers: {
+      Authorization: `Bearer ${session.token}`,
+    },
   };
 }
 
@@ -359,7 +362,10 @@ function Dashboard() {
                     onClick={() => {
                       document
                         .getElementById("needs-attention")
-                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        ?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
                     }}
                   >
                     <p>
@@ -369,9 +375,7 @@ function Dashboard() {
 
                     <h2>{displayedValue(pendingActions)}</h2>
 
-                    <label
-                      className={getSummaryBadgeClass(pendingActions > 0)}
-                    >
+                    <label className={getSummaryBadgeClass(pendingActions > 0)}>
                       {summaryLoading
                         ? "Loading..."
                         : summaryError

@@ -16,7 +16,11 @@ function EmergencyAlertBanner() {
 
   useEffect(() => {
     const checkAlerts = () => {
-      Axios.get("http://localhost:3000/api/sos/all")
+      Axios.get("http://localhost:3000/api/sos/all", {
+        headers: {
+          Authorization: `Bearer ${volunteerData?.token || ""}`,
+        },
+      })
         .then((res) => {
           if (res.data && res.data.requests) {
             const pendingList = res.data.requests.filter(
@@ -42,6 +46,7 @@ function EmergencyAlertBanner() {
     // Socket.IO real-time listener (Replaced Polling)
     const socket = io("http://localhost:3000", {
       transports: ["polling", "websocket"],
+      auth: { token: volunteerData?.token },
     });
 
     socket.on("connect", () => {

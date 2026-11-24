@@ -14,7 +14,11 @@ function TrustedContacts() {
     }
 
     const user = JSON.parse(usersession);
-    Axios.get(`http://localhost:3000/api/getTrustedContacts/${user.user_id}`)
+    Axios.get(`http://localhost:3000/api/getTrustedContacts/${user.user_id}`, {
+      headers: {
+        Authorization: `Bearer ${user.token}`,
+      },
+    })
       .then((response) => {
         setContacts(response.data);
       })
@@ -85,13 +89,20 @@ function TrustedContacts() {
     }
 
     //send POST reqquest to backend API
-    Axios.post("http://localhost:3000/api/addTrustedContact", {
-      womanId: user.user_id,
-      contactName: contactName,
-      relationship: relationship,
-      phoneNo: phoneNo,
-      email: email,
-    })
+    Axios.post(
+      "http://localhost:3000/api/addTrustedContact",
+      {
+        contactName: contactName,
+        relationship: relationship,
+        phoneNo: phoneNo,
+        email: email,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      },
+    )
 
       .then((response) => {
         //Add new contact to the list immediately
@@ -121,6 +132,11 @@ function TrustedContacts() {
   }
 
   function handleDelete(contactId) {
+    const user = JSON.parse(localStorage.getItem("mydata"));
+    if (!user || !user.token) {
+      window.location.href = "/login";
+      return;
+    }
     Swal.fire({
       icon: "warning",
       title: "Delete Contact?",
@@ -133,6 +149,11 @@ function TrustedContacts() {
       if (result.isConfirmed) {
         Axios.delete(
           `http://localhost:3000/api/deleteTrustedContact/${contactId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${user.token}`,
+            },
+          },
         )
           .then((response) => {
             setContacts((prevContacts) =>
@@ -161,6 +182,11 @@ function TrustedContacts() {
   }
 
   function handleEdit(contact) {
+    const user = JSON.parse(localStorage.getItem("mydata"));
+    if (!user || !user.token) {
+      window.location.href = "/login";
+      return;
+    }
     Swal.fire({
       title: "Edit Trusted Contact",
       width: "500px",
@@ -287,6 +313,11 @@ function TrustedContacts() {
         Axios.put(
           `http://localhost:3000/api/editTrustedContact/${contact._id}`,
           result.value,
+          {
+            headers: {
+              Authorization: `Bearer ${user.token}`,
+            },
+          },
         )
           .then((response) => {
             setContacts((prevContacts) =>

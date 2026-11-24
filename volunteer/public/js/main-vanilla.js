@@ -769,7 +769,7 @@ ready(() => {
   initResponsiveTableShadows();
   initToastSystem();
   initCommandPalette();
-  initThemeSwitcher();
+  applySavedAccentTheme();
   initDashboardRefresh();
 });
 
@@ -851,90 +851,21 @@ function initDashboardRefresh() {
 }
 
 // ---------------------------------------------------------------------------
-// Theme switcher — 6 accent-color presets, persisted in localStorage
+// Apply the saved accent color without rendering the floating theme picker.
 // ---------------------------------------------------------------------------
-function initThemeSwitcher() {
+function applySavedAccentTheme() {
   const body = document.body;
   if (!body.classList.contains('theme-2026')) return;
-  // Skip on auth/error full-screen pages where the switcher would crowd
-  if (body.classList.contains('auth-page') || body.classList.contains('error-page')) return;
+  const themes = ['blue', 'purple', 'teal', 'rose', 'amber', 'graphite'];
+  let savedTheme = 'blue';
 
-  const THEMES = [
-    { id: 'blue',     label: 'Blue',     color: '#4272d7' },
-    { id: 'purple',   label: 'Purple',   color: '#7c3aed' },
-    { id: 'teal',     label: 'Teal',     color: '#0d9488' },
-    { id: 'rose',     label: 'Rose',     color: '#e11d48' },
-    { id: 'amber',    label: 'Amber',    color: '#d97706' },
-    { id: 'graphite', label: 'Graphite', color: '#334155' },
-  ];
-  const STORAGE_KEY = 'cooladmin.theme';
+  try {
+    const storedTheme = localStorage.getItem('cooladmin.theme');
+    if (themes.includes(storedTheme)) savedTheme = storedTheme;
+  } catch (_) {}
 
-  // Apply persisted choice (or default to blue)
-  const saved = (function () {
-    try { return localStorage.getItem(STORAGE_KEY); } catch (_) { return null; }
-  })();
-  let active = THEMES.find((t) => t.id === saved) || THEMES[0];
-  applyTheme(active.id);
-
-  // Build the floating widget
-  const wrap = document.createElement('div');
-  wrap.className = 'theme-switcher';
-  wrap.innerHTML = `
-    <div class="theme-switcher__panel" role="dialog" aria-label="Theme picker">
-      <p class="theme-switcher__title">Accent color</p>
-      <div class="theme-switcher__grid"></div>
-    </div>
-    <button class="theme-switcher__toggle" type="button" aria-label="Change theme color" aria-expanded="false">
-      <i class="fa-solid fa-palette" aria-hidden="true"></i>
-    </button>
-  `;
-  document.body.appendChild(wrap);
-
-  const grid = wrap.querySelector('.theme-switcher__grid');
-  THEMES.forEach((t) => {
-    const btn = document.createElement('button');
-    btn.className = 'theme-switcher__swatch';
-    btn.type = 'button';
-    btn.dataset.theme = t.id;
-    if (t.id === active.id) btn.classList.add('is-active');
-    btn.setAttribute('aria-label', `Use ${t.label} theme`);
-    btn.innerHTML = `
-      <span class="theme-switcher__swatch-color" style="background:${t.color};"></span>
-      <span class="theme-switcher__swatch-label">${t.label}</span>
-    `;
-    btn.addEventListener('click', () => {
-      active = t;
-      applyTheme(t.id);
-      try { localStorage.setItem(STORAGE_KEY, t.id); } catch (_) {}
-      grid.querySelectorAll('.theme-switcher__swatch').forEach((b) => b.classList.toggle('is-active', b.dataset.theme === t.id));
-      if (window.toast) window.toast.success(`Switched to ${t.label}`);
-    });
-    grid.appendChild(btn);
-  });
-
-  const toggle = wrap.querySelector('.theme-switcher__toggle');
-  toggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    wrap.classList.toggle('is-open');
-    toggle.setAttribute('aria-expanded', wrap.classList.contains('is-open'));
-  });
-  document.addEventListener('click', (e) => {
-    if (wrap.classList.contains('is-open') && !wrap.contains(e.target)) {
-      wrap.classList.remove('is-open');
-      toggle.setAttribute('aria-expanded', 'false');
-    }
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && wrap.classList.contains('is-open')) {
-      wrap.classList.remove('is-open');
-      toggle.setAttribute('aria-expanded', 'false');
-    }
-  });
-
-  function applyTheme(id) {
-    body.classList.remove(...THEMES.map((t) => `theme-${t.id}`));
-    body.classList.add(`theme-${id}`);
-  }
+  body.classList.remove(...themes.map((theme) => `theme-${theme}`));
+  body.classList.add(`theme-${savedTheme}`);
 }
 
 // ---------------------------------------------------------------------------

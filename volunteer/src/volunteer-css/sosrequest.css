@@ -1,0 +1,537 @@
+/* ==================== PAGE ==================== */
+
+.sos-page {
+  padding: 30px;
+  background: #f8f9fc;
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+}
+
+.sos-header {
+  margin-bottom: 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.sos-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.sos-subtitle {
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.sos-refresh-button {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ==================== TABLE ==================== */
+
+.sos-table-container {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.sos-table-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sos-table-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.sos-table-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.sos-live-badge {
+  background: #dcfce7;
+  color: #15803d;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sos-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.sos-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1050px;
+}
+
+.sos-table th {
+  padding: 14px 18px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sos-table td {
+  padding: 16px 18px;
+  font-size: 13px;
+  color: #374151;
+  border-bottom: 1px solid #f1f2f4;
+}
+
+.sos-table-id {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.sos-table-phone {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.sos-not-provided {
+  color: #9ca3af;
+}
+
+.sos-empty-cell {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+}
+
+.sos-empty-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.sos-empty-description {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.sos-priority {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sos-priority-high {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.sos-priority-normal {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.sos-distance {
+  color: #15803d;
+}
+
+.sos-status {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.sos-status-pending {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.sos-status-approved {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.sos-status-active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.sos-status-cancelled {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.sos-status-resolved {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+/* ==================== ACTION BUTTONS ==================== */
+
+.sos-action-group {
+  display: flex;
+  gap: 6px;
+}
+
+.sos-button {
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sos-approve-button {
+  background: #15803d;
+  color: #ffffff;
+  margin-right: 6px;
+}
+
+.sos-reject-button {
+  background: #fee2e2;
+  color: #b91c1c;
+  font-weight: 600;
+  padding: 7px 12px;
+}
+
+.sos-share-button {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.sos-share-button.is-broadcasting {
+  background: #ea580c;
+}
+
+.sos-view-button {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.sos-resolve-button {
+  width: 100%;
+  border: none;
+  background: #15803d;
+  color: #ffffff;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 20px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* ==================== LIVE TRACKING SECTION ==================== */
+
+.sos-live-section {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 24px;
+}
+
+.sos-detail-card,
+.sos-map-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+}
+
+.sos-detail-header,
+.sos-map-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sos-detail-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.sos-detail-body {
+  padding: 20px;
+}
+
+.sos-user-name {
+  font-size: 19px;
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.sos-request-id {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 16px;
+}
+
+.sos-detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 11px 0;
+  border-bottom: 1px solid #f1f2f4;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.sos-detail-label {
+  color: #6b7280;
+}
+
+.sos-detail-value {
+  font-weight: 700;
+  color: #1f2937;
+  text-align: right;
+}
+
+.sos-detail-distance {
+  color: #15803d;
+  font-size: 15px;
+}
+
+.sos-detail-share-button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 16px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.sos-detail-approve-button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 16px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.sos-google-maps-link {
+  display: block;
+  text-align: center;
+  margin-top: 12px;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ==================== MAP ==================== */
+
+.sos-map-header small {
+  color: #6b7280;
+}
+
+.sos-radar-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sos-radar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #16a34a;
+  animation: sosPulseRing 1.5s infinite;
+}
+
+.sos-map-content {
+  position: relative;
+}
+
+.sos-map-container {
+  height: 440px;
+  width: 100%;
+  background: #f1f5f9;
+}
+
+.sos-map-hud,
+.sos-map-legend {
+  position: absolute;
+  bottom: 15px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  z-index: 1000;
+  border: 1px solid #e2e8f0;
+}
+
+.sos-map-hud {
+  right: 15px;
+  padding: 12px 18px;
+}
+
+.sos-map-hud-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.sos-map-hud-distance {
+  font-size: 20px;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.sos-map-legend {
+  left: 15px;
+  padding: 10px 14px;
+  font-size: 12px;
+}
+
+.sos-map-legend-title {
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.sos-map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sos-map-legend-item:last-child {
+  margin-bottom: 0;
+}
+
+.sos-map-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.sos-woman-dot {
+  background: #ef4444;
+}
+
+.sos-volunteer-dot {
+  background: #10b981;
+}
+
+/* ==================== LEAFLET MARKERS ==================== */
+
+.custom-leaflet-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.sos-marker-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+}
+
+.sos-marker-pulse {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  animation: sosPulseRing 1.8s infinite;
+}
+
+.sos-woman-pulse {
+  background: rgba(239, 68, 68, 0.35);
+}
+
+.sos-volunteer-pulse {
+  background: rgba(16, 185, 129, 0.35);
+}
+
+.sos-marker-icon {
+  width: 34px;
+  height: 34px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px;
+  font-size: 16px;
+  z-index: 1;
+}
+
+.sos-woman-marker-icon {
+  background: #ef4444;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+}
+
+.sos-volunteer-marker-icon {
+  background: #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+}
+
+.sos-table tbody tr.sos-selected-row {
+  background: #f0fdf4;
+}
+
+@keyframes sosPulseRing {
+  0% {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.4);
+    opacity: 0.3;
+  }
+
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}

@@ -28,6 +28,11 @@ function Profile() {
       try {
         const response = await axios.get(
           `http://localhost:3000/api/getwomanuserdetails/${mydata.user_id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${mydata.token}`,
+            },
+          },
         );
         if (isMounted) {
           setUser(response.data);
@@ -108,6 +113,11 @@ function Profile() {
       const response = await axios.put(
         `http://localhost:3000/api/editwomanprofilephoto/${mydata.user_id}`,
         formData,
+        {
+          headers: {
+            Authorization: `Bearer ${mydata.token}`,
+          },
+        },
       );
 
       setUser(response.data.user);
@@ -193,6 +203,11 @@ function Profile() {
       const response = await axios.put(
         `http://localhost:3000/api/editwomanprofile/${mydata.user_id}`,
         editData,
+        {
+          headers: {
+            Authorization: `Bearer ${mydata.token}`,
+          },
+        },
       );
 
       setUser(response.data.user);
@@ -278,6 +293,11 @@ function Profile() {
       await axios.put(
         `http://localhost:3000/api/changewomanpassword/${mydata.user_id}`,
         passwordData,
+        {
+          headers: {
+            Authorization: `Bearer ${mydata.token}`,
+          },
+        },
       );
 
       setPasswordData({

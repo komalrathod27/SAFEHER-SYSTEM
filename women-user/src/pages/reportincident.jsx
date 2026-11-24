@@ -97,7 +97,6 @@ function ReportIncident() {
     try {
       // Create FormData to send data
       const formData = new FormData();
-      formData.append("womanId", mydata.user_id); // Append user ID to associate the report with the logged-in user
       formData.append("incidentType", incidentType);
       formData.append("description", description);
       formData.append("incidentDate", incidentDate);
@@ -109,6 +108,11 @@ function ReportIncident() {
       const response = await axios.post(
         "http://localhost:3000/api/addincidentreport",
         formData,
+        {
+          headers: {
+            Authorization: `Bearer ${mydata.token}`,
+          },
+        },
       );
 
       //success message

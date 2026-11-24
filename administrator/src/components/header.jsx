@@ -10,7 +10,11 @@ function Header() {
       const data = JSON.parse(sessionStorage.getItem("mydata") || "null");
       if (!data?._id) return;
 
-      Axios.get(`http://localhost:3000/api/getadminprofile/${data._id}`)
+      Axios.get(`http://localhost:3000/api/getadminprofile/${data._id}`, {
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+        },
+      })
         .then((res) => {
           if (res.data.status === "Success") setAdminData(res.data.data);
         })

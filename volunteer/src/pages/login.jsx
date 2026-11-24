@@ -1,17 +1,29 @@
 import React, { useState } from "react";
 import Swal from "sweetalert2";
 import Axios from "axios";
+import "../volunteer-css/login.css";
 
 function VolunteerLogin() {
+  const REMEMBERED_EMAIL_KEY = "volunteer_remembered_email";
+  const REMEMBER_ME_KEY = "volunteer_remember_me";
+
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(
+    () => localStorage.getItem(REMEMBER_ME_KEY) === "true",
+  );
+  const [email, setEmail] = useState(
+    () => localStorage.getItem(REMEMBERED_EMAIL_KEY) || "",
+  );
+
   const handleLogin = (e) => {
     e.preventDefault();
     if (isLoading) return;
-    const email = document.getElementById("vol-email").value.trim();
+
+    const trimmedEmail = email.trim().toLowerCase();
     const password = document.getElementById("vol-password").value.trim();
 
     // Email validation
-    if (email === "") {
+    if (trimmedEmail === "") {
       Swal.fire({
         icon: "warning",
         title: "Email Required",
@@ -23,7 +35,7 @@ function VolunteerLogin() {
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!emailPattern.test(email)) {
+    if (!emailPattern.test(trimmedEmail)) {
       Swal.fire({
         icon: "warning",
         title: "Invalid Email",
@@ -47,7 +59,7 @@ function VolunteerLogin() {
     // Login API
     setIsLoading(true);
     Axios.post("http://localhost:3000/api/volunteerlogin", {
-      email: email,
+      email: trimmedEmail,
       password: password,
     })
       .then((response) => {
@@ -60,10 +72,21 @@ function VolunteerLogin() {
             name: user.name,
             contact_no: user.contact_no || "",
             profile_photo: user.profile_photo || "",
+            token: user.sessionToken,
           };
 
-          sessionStorage.setItem("mydata", JSON.stringify(data));
           localStorage.removeItem("mydata");
+          sessionStorage.removeItem("mydata");
+
+          if (rememberMe) {
+            localStorage.setItem("mydata", JSON.stringify(data));
+            localStorage.setItem(REMEMBER_ME_KEY, "true");
+            localStorage.setItem(REMEMBERED_EMAIL_KEY, trimmedEmail);
+          } else {
+            sessionStorage.setItem("mydata", JSON.stringify(data));
+            localStorage.setItem(REMEMBER_ME_KEY, "false");
+            localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+          }
 
           Swal.fire({
             icon: "success",
@@ -115,230 +138,6 @@ function VolunteerLogin() {
 
   return (
     <div className="vol-login">
-      <style>{`
-        .vol-login,
-        .vol-login * {
-          box-sizing: border-box;
-        }
-
-        .vol-login {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 35px 20px;
-          font-family: "Inter", sans-serif;
-          background:
-            radial-gradient(
-              circle at 10% 15%,
-              rgba(22,160,133,0.12),
-              transparent 30%
-            ),
-            radial-gradient(
-              circle at 90% 85%,
-              rgba(39,174,96,0.10),
-              transparent 30%
-            ),
-            linear-gradient(135deg, #f2fbf7 0%, #f8fcfa 100%);
-            font-family: "Inter", sans-serif;
-        }
-
-        .vol-card {
-          width: 100%;
-          max-width: 450px;
-          padding: 20px 38px;
-          background: #ffffff;
-          border: 1px solid #dcefe6;
-          border-radius: 20px;
-          box-shadow: 0 18px 45px rgba(22, 100, 75, 0.10);
-        }
-
-        /* BRAND */
-
-        .vol-brand {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 20px;
-          text-decoration: none;
-        }
-
-        .vol-brand img {
-        width: 250px;
-        height: auto;
-        }
-
-        /* HEADING */
-        .vol-title {
-          margin: 0;
-          text-align: center;
-          color: #0d414d;
-          font-size: 27px;
-          font-weight: 700;
-        }
-
-        .vol-subtitle {
-          max-width: 350px;
-          margin: 8px auto 28px;
-          text-align: center;
-          color: #71847e;
-          font-size: 14px;
-          line-height: 1.35;
-        }
-
-        /* FORM */
-
-        .vol-group {
-          margin-bottom: 18px;
-        }
-
-        .vol-group label {
-          display: block;
-          margin-bottom: 8px;
-          font-size: 13px;
-          font-weight: 700;
-        }
-
-        .mail {
-        color: #0d414d;
-        }
-
-        .vol-input {
-          width: 100%;
-          height: 48px;
-          padding: 0 14px;
-          border: 1.5px solid #dcebe5;
-          border-radius: 10px;
-          outline: none;
-          background: #fbfefd;
-          color: #173b35;
-          font-size: 14px;
-          transition: 0.25s;
-        }
-
-        .vol-input::placeholder {
-          color: #a5b5af;
-        }
-
-        .vol-input:focus {
-          border-color: #16a085;
-          background: #ffffff;
-          box-shadow: 0 0 0 3px rgba(22,160,133,0.10);
-        }
-
-        /* OPTIONS */
-
-        .vol-options {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin: 5px 0 22px;
-          font-size: 13px;
-        }
-
-        .vol-remember {
-          color: #71847e;
-        }
-
-        .vol-remember input {
-          margin-right: 6px;
-          accent-color: #16a085;
-        }
-
-        .vol-link {
-          color: #139477;
-          text-decoration: none;
-          font-weight: 600;
-        }
-
-        .vol-link:hover {
-          color: #0d755e;
-          text-decoration: underline;
-        }
-
-        /* LOGIN BUTTON */
-
-        .vol-login-btn {
-          width: 100%;
-          height: 49px;
-          border: none;
-          border-radius: 10px;
-          background: linear-gradient(135deg, #16a085, #27ae60);
-          color: #ffffff;
-          font-size: 15px;
-          font-weight: 700;
-          cursor: pointer;
-          box-shadow: 0 9px 22px rgba(22,160,133,0.20);
-          transition: 0.25s;
-        }
-
-        .vol-login-btn:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
-          transform: none;
-        }
-
-        .vol-login-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 26px rgba(22,160,133,0.28);
-        }
-
-        /* DIVIDER */
-
-        .vol-divider {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin: 25px 0;
-          color: #a0b0aa;
-          font-size: 11px;
-          font-weight: 600;
-        }
-
-        .vol-divider::before,
-        .vol-divider::after {
-          content: "";
-          flex: 1;
-          height: 1px;
-          background: #e3eee9;
-        }
-
-        /* REGISTER */
-
-        .vol-register {
-          margin: 24px 0 0;
-          text-align: center;
-          color: #70847e;
-          font-size: 13.5px;
-        }
-
-        .vol-register a {
-          color: #16a085;
-          font-weight: 700;
-          text-decoration: none;
-        }
-
-        .vol-register a:hover {
-          text-decoration: underline;
-        }
-
-        /* RESPONSIVE */
-
-        @media (max-width: 500px) {
-          .vol-card {
-            padding: 30px 22px;
-          }
-
-          .vol-title {
-            font-size: 25px;
-          }
-
-          .vol-options {
-            font-size: 12px;
-          }
-        }
-      `}</style>
-
       <form className="vol-card" onSubmit={handleLogin}>
         {/* SafeHer Volunteer Logo */}
         <a href="/" className="vol-brand">
@@ -365,6 +164,8 @@ function VolunteerLogin() {
             className="vol-input"
             placeholder="Enter your email address"
             autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
         </div>
 
@@ -386,7 +187,19 @@ function VolunteerLogin() {
         {/* Remember / Forgot */}
         <div className="vol-options">
           <label className="vol-remember">
-            <input type="checkbox" />
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setRememberMe(checked);
+                localStorage.setItem(REMEMBER_ME_KEY, String(checked));
+
+                if (!checked) {
+                  localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+                }
+              }}
+            />
             Remember me
           </label>
 

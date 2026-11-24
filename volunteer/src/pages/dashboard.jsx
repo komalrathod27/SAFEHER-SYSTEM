@@ -166,7 +166,11 @@ function Dashboard() {
     await Promise.all(
       jobs.map(async (job) => {
         try {
-          const response = await fetch(job.url);
+          const response = await fetch(job.url, {
+            headers: {
+              Authorization: `Bearer ${volunteer.token || ""}`,
+            },
+          });
           if (!response.ok) throw new Error(`Unable to load ${job.key}.`);
           const data = await response.json();
           job.update(data);
@@ -184,7 +188,10 @@ function Dashboard() {
   useEffect(() => {
     loadDashboard();
 
-    const socket = io(API, { transports: ["polling", "websocket"] });
+    const socket = io(API, {
+      transports: ["polling", "websocket"],
+      auth: { token: volunteer.token },
+    });
 
     socket.on("connect", () => {
       setLive(true);
@@ -778,11 +785,6 @@ function Dashboard() {
             })}
           </div>
         </section>
-
-        <footer className="vd-footer">
-          <HeartHandshake size={16} />
-          <span>SafeHer · Supporting a safer community, together.</span>
-        </footer>
       </div>
     </main>
   );

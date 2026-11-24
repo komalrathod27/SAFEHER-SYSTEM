@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ChatBot from "../components/chatbot";
 import Axios from "axios";
 import Swal from "sweetalert2";
 import L from "leaflet";
@@ -24,13 +25,25 @@ const cautionIcon = new L.DivIcon({
 function Home() {
   const [activeSos, setActiveSos] = useState(null);
   const [safetyAreas, setSafetyAreas] = useState([]);
+  const [showChat, setShowChat] = useState(false);
+
+  // Close the chat when the Esc key is pressed
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && setShowChat(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     const rawData = localStorage.getItem("mydata");
     if (!rawData) return;
     try {
       const user = JSON.parse(rawData);
-      Axios.get(`http://localhost:3000/api/sos/active/${user.user_id}`)
+      Axios.get(`http://localhost:3000/api/sos/active/${user.user_id}`, {
+        headers: {
+          Authorization: `Bearer ${user.token || ""}`,
+        },
+      })
         .then((res) => {
           if (res.data.active && res.data.sos) {
             setActiveSos(res.data.sos);
@@ -843,15 +856,35 @@ function Home() {
       </section>
 
       {/* ================= FLOATING AI ================= */}
+      {showChat && (
+        <ChatBot
+          onClose={() => setShowChat(false)}
+          onSOS={() => {
+            if (
+              window.confirm(
+                "Send an SOS alert to nearby volunteers and your trusted contacts?",
+              )
+            ) {
+              handleSOSClick();
+            }
+          }}
+        />
+      )}
       <div className="sh-ai-float">
         <button
           type="button"
-          className="sh-ai-button"
-          title="Ask SafeHer AI"
-          aria-label="Ask SafeHer AI"
+          className={`sh-ai-button ${showChat ? "open" : ""}`}
+          title={showChat ? "Close SafeHer AI" : "Ask SafeHer AI"}
+          aria-label={showChat ? "Close SafeHer AI" : "Ask SafeHer AI"}
+          aria-expanded={showChat}
+          onClick={() => setShowChat((prev) => !prev)}
         >
-          <i className="fa-solid fa-robot"></i>
-          <span className="sh-ai-status" aria-hidden="true"></span>
+          <i
+            className={showChat ? "fa-solid fa-xmark" : "fa-solid fa-robot"}
+          ></i>
+          {!showChat && (
+            <span className="sh-ai-status" aria-hidden="true"></span>
+          )}
         </button>
       </div>
     </div>

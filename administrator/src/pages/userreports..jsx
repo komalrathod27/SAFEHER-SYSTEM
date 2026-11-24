@@ -27,12 +27,25 @@ function UserReports() {
 
   const getList = (data) => {
     if (Array.isArray(data)) return data;
-    if (Array.isArray(data?.requests)) return data.requests;
-    if (Array.isArray(data?.users)) return data.users;
-    if (Array.isArray(data?.women)) return data.women;
-    if (Array.isArray(data?.volunteers)) return data.volunteers;
-    if (Array.isArray(data?.reports)) return data.reports;
-    if (Array.isArray(data?.data)) return data.data;
+
+    const possibleLists = [
+      "requests",
+      "users",
+      "women",
+      "womenUsers",
+      "volunteers",
+      "reports",
+      "sosRequests",
+      "sos",
+      "incidentReports",
+      "data",
+    ];
+
+    for (const key of possibleLists) {
+      if (Array.isArray(data?.[key])) {
+        return data[key];
+      }
+    }
     return [];
   };
 
@@ -40,42 +53,61 @@ function UserReports() {
     setLoading(true);
     setError("");
 
-    const results = await Promise.allSettled([
-      axios.get("http://localhost:3000/api/getwomanusers"),
-      axios.get("http://localhost:3000/api/getvolunteer"),
-      axios.get("http://localhost:3000/api/sos/all"),
-      axios.get("http://localhost:3000/api/getadminincidentreports"),
-    ]);
+    try {
+      const data = JSON.parse(sessionStorage.getItem("mydata"));
+      if (!data?.token) {
+        throw new Error("Admin token not found. Please login again.");
+      }
+      const config = {
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+        },
+      };
 
-    if (results.every((result) => result.status === "rejected")) {
-      setError("Unable to load report data. Please check your backend.");
+      const results = await Promise.allSettled([
+        axios.get("http://localhost:3000/api/getwomanusers", config),
+        axios.get("http://localhost:3000/api/getvolunteer", config),
+        axios.get("http://localhost:3000/api/admin/sos/all", config),
+        axios.get("http://localhost:3000/api/getadminincidentreports", config),
+      ]);
+
+      if (results.every((result) => result.status === "rejected")) {
+        setError("Unable to load report data. Please check your backend.");
+      }
+
+      if (results[0].status === "fulfilled") {
+        setWomenUsers(getList(results[0].value.data));
+      } else {
+        console.error("Women Users API:", results[0].reason);
+      }
+
+      if (results[1].status === "fulfilled") {
+        setVolunteers(getList(results[1].value.data));
+      } else {
+        console.error("Volunteers API:", results[1].reason);
+      }
+
+      if (results[2].status === "fulfilled") {
+        setSosRequests(getList(results[2].value.data));
+      } else {
+        console.error("SOS API:", results[2].reason);
+      }
+
+      if (results[3].status === "fulfilled") {
+        setIncidentReports(getList(results[3].value.data));
+      } else {
+        console.error("Incident Reports API:", results[3].reason);
+      }
+    } catch (error) {
+      console.error("User Reports Error:", error);
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "Unable to load report data.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    if (results[0].status === "fulfilled") {
-      setWomenUsers(getList(results[0].value.data));
-    } else {
-      console.error("Women Users API:", results[0].reason);
-    }
-
-    if (results[1].status === "fulfilled") {
-      setVolunteers(getList(results[1].value.data));
-    } else {
-      console.error("Volunteers API:", results[1].reason);
-    }
-
-    if (results[2].status === "fulfilled") {
-      setSosRequests(getList(results[2].value.data));
-    } else {
-      console.error("SOS API:", results[2].reason);
-    }
-
-    if (results[3].status === "fulfilled") {
-      setIncidentReports(getList(results[3].value.data));
-    } else {
-      console.error("Incident Reports API:", results[3].reason);
-    }
-
-    setLoading(false);
   };
 
   const currentUsers = activeTab === "women" ? womenUsers : volunteers;
@@ -217,9 +249,7 @@ function UserReports() {
     displayedPage * USERS_PER_PAGE,
   );
   const firstDisplayedUser =
-    filteredUsers.length === 0
-      ? 0
-      : (displayedPage - 1) * USERS_PER_PAGE + 1;
+    filteredUsers.length === 0 ? 0 : (displayedPage - 1) * USERS_PER_PAGE + 1;
   const lastDisplayedUser = Math.min(
     displayedPage * USERS_PER_PAGE,
     filteredUsers.length,

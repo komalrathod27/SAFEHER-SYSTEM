@@ -1146,11 +1146,8 @@
   background:
     linear-gradient(90deg,
       rgba(23, 37, 84, 0.96),
-      rgba(23, 37, 84, 0.72)),
-    url("/assets/images/how-reminder.jpg") center center / cover no-repeat;
-
+      rgba(23, 37, 84, 0.72));
   border-radius: 13px;
-
   box-shadow: 0 20px 50px rgba(23, 37, 84, 0.17);
 }
 

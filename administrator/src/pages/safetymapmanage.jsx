@@ -217,7 +217,9 @@ function SafetyMapManagement() {
         `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(location)}`,
       );
       if (!response.ok) {
-        throw new Error(`Location search failed with status ${response.status}.`);
+        throw new Error(
+          `Location search failed with status ${response.status}.`,
+        );
       }
 
       const results = await response.json();
@@ -304,9 +306,16 @@ function SafetyMapManagement() {
         ? `http://localhost:3000/api/editsafetyarea/${encodeURIComponent(areaId)}`
         : "http://localhost:3000/api/addsafetyarea";
 
+      const data = JSON.parse(sessionStorage.getItem("mydata"));
+      if (!data?.token) {
+        throw new Error("Admin token not found. Please login again.");
+      }
       const response = await fetch(url, {
         method: areaId ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${data.token}`,
+        },
         body: JSON.stringify({
           location,
           type,
@@ -366,9 +375,16 @@ function SafetyMapManagement() {
     if (!confirmation.isConfirmed) return;
 
     try {
+      const data = JSON.parse(sessionStorage.getItem("mydata"));
+      if (!data?.token) {
+        throw new Error("Admin token not found. Please login again.");
+      }
       const response = await fetch(
         `http://localhost:3000/api/deletesafetyarea/${encodeURIComponent(areaId)}`,
-        { method: "DELETE" },
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${data.token}` },
+        },
       );
 
       const result = await response.json();
@@ -513,59 +529,59 @@ function SafetyMapManagement() {
                   <MapUpdater position={selectedOverviewPosition} />
 
                   {safetyAreas.map((area) => {
-                      const latitude = Number(area.latitude);
-                      const longitude = Number(area.longitude);
+                    const latitude = Number(area.latitude);
+                    const longitude = Number(area.longitude);
 
-                      if (
-                        !Number.isFinite(latitude) ||
-                        !Number.isFinite(longitude) ||
-                        latitude < -90 ||
-                        latitude > 90 ||
-                        longitude < -180 ||
-                        longitude > 180
-                      ) {
-                        return null;
-                      }
+                    if (
+                      !Number.isFinite(latitude) ||
+                      !Number.isFinite(longitude) ||
+                      latitude < -90 ||
+                      latitude > 90 ||
+                      longitude < -180 ||
+                      longitude > 180
+                    ) {
+                      return null;
+                    }
 
-                      return (
-                        <Marker
-                          key={area._id || area.areaId}
-                          position={[latitude, longitude]}
-                          icon={area.type === "Safe" ? safeIcon : cautionIcon}
-                        >
-                          <Popup>
-                            <strong>{area.location}</strong>
-                            <br />
-                            Type: {area.type}
-                            <br />
-                            {area.description}
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: "8px",
-                                marginTop: "12px",
-                              }}
+                    return (
+                      <Marker
+                        key={area._id || area.areaId}
+                        position={[latitude, longitude]}
+                        icon={area.type === "Safe" ? safeIcon : cautionIcon}
+                      >
+                        <Popup>
+                          <strong>{area.location}</strong>
+                          <br />
+                          Type: {area.type}
+                          <br />
+                          {area.description}
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              marginTop: "12px",
+                            }}
+                          >
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-info"
+                              onClick={() => viewSafetyArea(area.areaId)}
                             >
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-info"
-                                onClick={() => viewSafetyArea(area.areaId)}
-                              >
-                                View
-                              </button>
+                              View
+                            </button>
 
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-primary"
-                                onClick={() => editSafetyArea(area.areaId)}
-                              >
-                                Edit
-                              </button>
-                            </div>
-                          </Popup>
-                        </Marker>
-                      );
-                    })}
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-primary"
+                              onClick={() => editSafetyArea(area.areaId)}
+                            >
+                              Edit
+                            </button>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  })}
 
                   <MapResize />
                 </MapContainer>

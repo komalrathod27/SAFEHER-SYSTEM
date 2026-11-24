@@ -1,12 +1,34 @@
 # Dependencies
 node_modules/
+**/node_modules/
+
+# Build Output
+/dist/
+**/dist/
+/build/
+**/build/
 
 # Environment Variables
 .env
 .env.local
 .env.*.local
+**/.env.*
+
+# Backend Private Uploads
+/server/articles/*
+!/server/articles/.gitkeep
+
+/server/incidentReports/*
+!/server/incidentReports/.gitkeep
+
+/server/public/*
+!/server/public/.gitkeep
+
+/server/volunteer/*
+!/server/volunteer/.gitkeep
 
 # Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -14,3 +36,4 @@ yarn-error.log*
 # OS Files
 .DS_Store
 Thumbs.db
+.vscode/

@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   useLocation,
+  Navigate,
 } from "react-router-dom";
 import Header from "./components/header.jsx";
 import Footer from "./components/footer.jsx";
@@ -23,6 +24,24 @@ import ForgotPassword from "./pages/forgotpassword.jsx";
 import VerifyOTP from "./pages/verifyotp.jsx";
 import ResetPassword from "./pages/resetpassword.jsx";
 
+function hasWomanSession() {
+  try {
+    const session = JSON.parse(localStorage.getItem("mydata") || "null");
+    return Boolean(session?.user_id && session?.token);
+  } catch {
+    return false;
+  }
+}
+
+function ProtectedWomanPage({ children }) {
+  const location = useLocation();
+  return hasWomanSession() ? (
+    children
+  ) : (
+    <Navigate to="/login" replace state={{ from: location }} />
+  );
+}
+
 function WomanActivityTracker() {
   const location = useLocation();
   const lastActivitySentAt = useRef(0);
@@ -41,7 +60,12 @@ function WomanActivityTracker() {
       lastActivitySentAt.current = now;
       fetch(
         `http://localhost:3000/api/womanactivity/${encodeURIComponent(womanId)}`,
-        { method: "PUT" },
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${session.token}`,
+          },
+        },
       )
         .then((response) => {
           if (!response.ok) {
@@ -82,19 +106,55 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedWomanPage>
+              <Profile />
+            </ProtectedWomanPage>
+          }
+        />
         <Route path="/safetymap" element={<SafetyMap />} />
         <Route path="/safetyresources" element={<SafetyResources />} />
         <Route path="/howitworks" element={<HowItWorks />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/trustedcontacts" element={<TrustedContacts />} />
-        <Route path="/reportincident" element={<ReportIncident />} />
-        <Route path="/myreports" element={<MyReports />} />
-        <Route path="/sostracking" element={<SOSTracking />} />
+        <Route
+          path="/trustedcontacts"
+          element={
+            <ProtectedWomanPage>
+              <TrustedContacts />
+            </ProtectedWomanPage>
+          }
+        />
+        <Route
+          path="/reportincident"
+          element={
+            <ProtectedWomanPage>
+              <ReportIncident />
+            </ProtectedWomanPage>
+          }
+        />
+        <Route
+          path="/myreports"
+          element={
+            <ProtectedWomanPage>
+              <MyReports />
+            </ProtectedWomanPage>
+          }
+        />
+        <Route
+          path="/sostracking"
+          element={
+            <ProtectedWomanPage>
+              <SOSTracking />
+            </ProtectedWomanPage>
+          }
+        />
         <Route path="/forgotpassword" element={<ForgotPassword />} />
         <Route path="/verifyotp" element={<VerifyOTP />} />
         <Route path="/resetpassword" element={<ResetPassword />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Footer />
     </Router>

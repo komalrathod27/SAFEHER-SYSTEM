@@ -24,10 +24,13 @@ function getStatusClass(status) {
 
 function getAdminRequestConfig() {
   const session = JSON.parse(sessionStorage.getItem("mydata") || "null");
+  if (!session?.token) {
+    throw new Error("Admin token not found. Please login again.");
+  }
   return {
-    headers: session?.token
-      ? { Authorization: `Bearer ${session.token}` }
-      : {},
+    headers: {
+      Authorization: `Bearer ${session.token}`,
+    },
   };
 }
 
@@ -206,14 +209,8 @@ export default function AdminSOSHistory() {
 
                   <div className="row mb-2">
                     <HistoryField label="Woman User" value={sos.womanName} />
-                    <HistoryField
-                      label="Location"
-                      value={sos.womanAddress}
-                    />
-                    <HistoryField
-                      label="Volunteer"
-                      value={sos.volunteerName}
-                    />
+                    <HistoryField label="Location" value={sos.womanAddress} />
+                    <HistoryField label="Volunteer" value={sos.volunteerName} />
                     <HistoryField
                       label="Request Created"
                       value={formatDate(sos.createdAt)}
@@ -259,15 +256,10 @@ export default function AdminSOSHistory() {
             <div className="modal-content">
               <div className="modal-header">
                 <div>
-                  <h5
-                    className="modal-title mb-1"
-                    id="sos-history-modal-title"
-                  >
+                  <h5 className="modal-title mb-1" id="sos-history-modal-title">
                     SOS Case Details
                   </h5>
-                  <small className="text-muted">
-                    SOS {selectedSOS._id}
-                  </small>
+                  <small className="text-muted">SOS {selectedSOS._id}</small>
                 </div>
                 <button
                   type="button"

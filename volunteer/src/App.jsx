@@ -4,6 +4,7 @@ import {
   Route,
   Routes,
   useLocation,
+  Navigate,
 } from "react-router-dom";
 import Header from "./components/header";
 import Sidebar from "./components/sidebar";
@@ -23,10 +24,22 @@ import ForgotPassword from "./pages/forgotpassword";
 import VerifyOTP from "./pages/verifyotp";
 import ResetPassword from "./pages/resetpassword";
 
+function hasVolunteerSession() {
+  try {
+    const rawData =
+      sessionStorage.getItem("mydata") || localStorage.getItem("mydata");
+    const session = JSON.parse(rawData || "null");
+    return Boolean(session?.user_id && session?.token);
+  } catch {
+    return false;
+  }
+}
+
 function Layout() {
   const Location = useLocation();
   const authPages = [
     "/",
+    "/login",
     "/register",
     "/forgotpassword",
     "/verifyotp",
@@ -37,12 +50,17 @@ function Layout() {
     return (
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgotpassword" element={<ForgotPassword />} />
         <Route path="/verifyotp" element={<VerifyOTP />} />
         <Route path="/resetpassword" element={<ResetPassword />} />
       </Routes>
     );
+  }
+
+  if (!hasVolunteerSession()) {
+    return <Navigate to="/" replace state={{ from: Location }} />;
   }
 
   const toggleSidebar = () => {
@@ -66,8 +84,6 @@ function Layout() {
         <Header onToggle={toggleSidebar} />
         <main className="main-content" id="main-content">
           <Routes>
-            <Route path="/" element={<Login />} />
-            <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/sosrequests" element={<SOSRequests />} />
             <Route path="/incidentreports" element={<IncidentReports />} />
@@ -76,6 +92,7 @@ function Layout() {
             <Route path="/trustscore" element={<TrustScore />} />
             <Route path="/badges" element={<Badges />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
         <Footer />

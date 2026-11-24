@@ -73,13 +73,30 @@ function WomenReport() {
       setLoading(true);
       setError("");
 
+      const data = JSON.parse(sessionStorage.getItem("mydata"));
+
+      if (!data?.token) {
+        throw new Error("Admin token not found. Please login again.");
+      }
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+        },
+      };
+
       const [womanRes, sosRes, incidentRes] = await Promise.all([
-        axios.get(`${API}/api/getwomanusers`),
-        axios.get(`${API}/api/sos/all`),
-        axios.get(`${API}/api/getadminincidentreports`),
+        axios.get(`${API}/api/getwomanusers`, config),
+        axios.get(`${API}/api/admin/sos/all`, config),
+        axios.get(`${API}/api/getadminincidentreports`, config),
       ]);
 
-      const women = getList(womanRes.data, ["users", "women", "data"]);
+      const women = getList(womanRes.data, [
+        "users",
+        "women",
+        "womenUsers",
+        "data",
+      ]);
 
       const selectedWoman = women.find(
         (user) => String(user._id) === String(id),
@@ -92,7 +109,12 @@ function WomenReport() {
 
       setWoman(selectedWoman);
 
-      const allSOS = getList(sosRes.data, ["requests", "data"]);
+      const allSOS = getList(sosRes.data, [
+        "requests",
+        "sosRequests",
+        "sos",
+        "data",
+      ]);
 
       const womanSOS = allSOS.filter(
         (sos) => String(sos.womanId) === String(id),
@@ -100,7 +122,11 @@ function WomenReport() {
 
       setSosList(womanSOS);
 
-      const allIncidents = getList(incidentRes.data, ["reports", "data"]);
+      const allIncidents = getList(incidentRes.data, [
+        "reports",
+        "incidentReports",
+        "data",
+      ]);
 
       const womanIncidents = allIncidents.filter(
         (report) => String(report.womanId) === String(id),
@@ -108,8 +134,15 @@ function WomenReport() {
 
       setIncidentCount(womanIncidents.length);
     } catch (err) {
-      console.error("Error fetching Woman User Report:", err);
-      setError("Unable to load the report. Please try again.");
+      console.error(
+        "Error fetching Woman User Report:",
+        err.response?.data || err,
+      );
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Unable to load the report. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -118,13 +151,22 @@ function WomenReport() {
   const handleViewSOS = async (sosId) => {
     try {
       setLoadingDetails(true);
+      const data = JSON.parse(sessionStorage.getItem("mydata"));
+      if (!data?.token) {
+        throw new Error("Admin token not found. Please login again.");
+      }
 
-      const response = await axios.get(`${API}/api/sos/details/${sosId}`);
+      const response = await axios.get(`${API}/api/sos/details/${sosId}`, {
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+        },
+      });
 
       setSelectedSOS(response.data.sos || response.data);
     } catch (err) {
-      console.error("Error fetching SOS details:", err);
-      alert("Unable to load SOS details.");
+      console.error("Error fetching SOS details:", err.response?.data || err);
+
+      alert(err.response?.data?.message || "Unable to load SOS details.");
     } finally {
       setLoadingDetails(false);
     }
@@ -512,7 +554,8 @@ function WomenReport() {
                             Emergency type
                           </span>
                           <h6 className="sos-detail-emergency">
-                            {selectedSOS.emergencyType || "Emergency Assistance"}
+                            {selectedSOS.emergencyType ||
+                              "Emergency Assistance"}
                           </h6>
                           <span className="sos-detail-date">
                             <i className="mdi mdi-calendar-clock mr-1"></i>

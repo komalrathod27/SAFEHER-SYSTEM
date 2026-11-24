@@ -56,10 +56,13 @@ function getAssignmentCountdown(value, referenceTime) {
 
 function getAdminRequestConfig() {
   const session = JSON.parse(sessionStorage.getItem("mydata") || "null");
+  if (!session?.token) {
+    throw new Error("Admin token not found. Please login again.");
+  }
   return {
-    headers: session?.token
-      ? { Authorization: `Bearer ${session.token}` }
-      : {},
+    headers: {
+      Authorization: `Bearer ${session.token}`,
+    },
   };
 }
 
@@ -374,7 +377,9 @@ export default function SOSMonitor() {
                   filteredRequests.map((sos) => (
                     <tr key={sos._id}>
                       <td>
-                        <strong>{String(sos._id).slice(-8).toUpperCase()}</strong>
+                        <strong>
+                          {String(sos._id).slice(-8).toUpperCase()}
+                        </strong>
                       </td>
                       <td>
                         <strong>{sos.womanName || "Woman User"}</strong>
@@ -472,7 +477,12 @@ export default function SOSMonitor() {
             aria-labelledby="admin-sos-detail-title"
             className="card mb-0"
             onClick={(event) => event.stopPropagation()}
-            style={{ width: "100%", maxWidth: 680, maxHeight: "90vh", overflowY: "auto" }}
+            style={{
+              width: "100%",
+              maxWidth: 680,
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}
           >
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-start mb-3">
@@ -516,16 +526,13 @@ export default function SOSMonitor() {
                 <strong>Triggered:</strong> {formatDate(selectedSOS.createdAt)}
               </p>
               <p>
-                <strong>Accepted:</strong>{" "}
-                {formatDate(selectedSOS.acceptedAt)}
+                <strong>Accepted:</strong> {formatDate(selectedSOS.acceptedAt)}
               </p>
               <p>
-                <strong>Assigned:</strong>{" "}
-                {formatDate(selectedSOS.assignedAt)}
+                <strong>Assigned:</strong> {formatDate(selectedSOS.assignedAt)}
               </p>
               <p>
-                <strong>Resolved:</strong>{" "}
-                {formatDate(selectedSOS.resolvedAt)}
+                <strong>Resolved:</strong> {formatDate(selectedSOS.resolvedAt)}
               </p>
               <p>
                 <strong>Volunteer:</strong>{" "}
@@ -536,7 +543,8 @@ export default function SOSMonitor() {
                 {selectedSOS.volunteerPhone || "Unavailable"}
               </p>
               <p>
-                <strong>Distance:</strong> {selectedSOS.distance || "Unavailable"}
+                <strong>Distance:</strong>{" "}
+                {selectedSOS.distance || "Unavailable"}
               </p>
               {selectedSOS.womanLat !== null &&
                 selectedSOS.womanLat !== undefined &&
@@ -650,7 +658,8 @@ export default function SOSMonitor() {
                       <div className="mr-3">
                         <strong className="d-block">{volunteer.name}</strong>
                         <small className="text-muted d-block">
-                          Service area: {volunteer.serviceArea || "Not provided"}
+                          Service area:{" "}
+                          {volunteer.serviceArea || "Not provided"}
                         </small>
                         {volunteer.contact_no && (
                           <small className="text-muted d-block">

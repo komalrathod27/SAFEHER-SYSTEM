@@ -8,7 +8,12 @@ function AllVolunteers() {
   const [filter, setFilter] = useState("All");
 
   useEffect(() => {
-    Axios.get("http://localhost:3000/api/getvolunteer")
+    const data = JSON.parse(sessionStorage.getItem("mydata"));
+    Axios.get("http://localhost:3000/api/getvolunteer", {
+      headers: {
+        Authorization: `Bearer ${data.token}`,
+      },
+    })
       .then((response) => {
         setList(response.data);
       })
@@ -29,7 +34,12 @@ function AllVolunteers() {
     setSelectedId(_id);
     $("#viewApplicationModal").modal("show");
 
-    Axios.get(`http://localhost:3000/api/getvolunteerdetails/${_id}`)
+    const data = JSON.parse(sessionStorage.getItem("mydata"));
+    Axios.get(`http://localhost:3000/api/getvolunteerdetails/${_id}`, {
+      headers: {
+        Authorization: `Bearer ${data.token}`,
+      },
+    })
       .then((response) => {
         const data = response.data;
         setStatus(data.status);
@@ -59,7 +69,16 @@ function AllVolunteers() {
   function approveVolunteer(_id) {
     console.log("Approved ID:", _id);
 
-    Axios.put(`http://localhost:3000/api/approvestatus/${_id}`)
+    const data = JSON.parse(sessionStorage.getItem("mydata"));
+    Axios.put(
+      `http://localhost:3000/api/approvestatus/${_id}`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+        },
+      },
+    )
       .then((response) => {
         console.log(response.data);
 
@@ -86,7 +105,16 @@ function AllVolunteers() {
   function rejectVolunteer(_id) {
     console.log("Rejected ID:", _id);
 
-    Axios.put(`http://localhost:3000/api/rejectstatus/${_id}`)
+    const data = JSON.parse(sessionStorage.getItem("mydata"));
+    Axios.put(
+      `http://localhost:3000/api/rejectstatus/${_id}`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+        },
+      },
+    )
       .then((response) => {
         console.log(response.data);
 

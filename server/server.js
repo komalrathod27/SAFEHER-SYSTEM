@@ -1,14 +1,16 @@
 require("dotenv").config();
+const jwt = require("jsonwebtoken"); //jwt is used to generate and verify the token for authentication and authorization of the user.
 const express = require("express"); //express is node.js framewrok that is used to create server/API.
 const http = require("http");
 const mongoose = require("mongoose"); //mongoose is used to connect to mongodb database.
-const crypto = require("crypto");
 const cors = require("cors"); //cors is used to allow cross-origin requests between frontend and backend.
 const bodyParser = require("body-parser"); //body-parser is used to parse(read) the body data.
 const googleMailService = require("./services/googleMailService");
 const app = express(); //one express app is created to handle the requests and responses.
+const crypto = require("crypto");
 const bcrypt = require("bcrypt"); //bcrypt is used to hash the password before storing it in the database.
 const server = http.createServer(app);
+const chatbotRoutes = require("./routes/chatbotroutes");
 
 // Initialize Socket.io with fallback
 let io = null;
@@ -32,14 +34,6 @@ const multer = require("multer"); //multer is used to handle file uploads in the
 const path = require("path"); //path is used to handle file paths in the backend.
 const fs = require("fs"); //for safety articles
 const PDFDocument = require("pdfkit"); //pdfkit is used to generate pdf files in the backend.
-const adminSessionSecret =
-  process.env.ADMIN_SESSION_SECRET || crypto.randomBytes(32).toString("hex");
-
-if (!process.env.ADMIN_SESSION_SECRET) {
-  console.warn(
-    "ADMIN_SESSION_SECRET is not set; admin sessions will expire when the server restarts.",
-  );
-}
 
 app.use(express.json()); //express.json() is used to parse the body data in json format.this is important because the frontend will send the data in json format and we need to parse it to use it in our backend.
 app.use(cors()); //cors() is used to allow cross-origin requests between frontend and backend.
@@ -48,6 +42,7 @@ app.use("/public", express.static("public"));
 app.use("/volunteer", express.static("volunteer")); //express.static() is used to serve static files like images, css, js etc. public is the folder where we will store the uploaded files(images).
 app.use("/articles", express.static("articles"));
 app.use("/incidentReports", express.static("incidentReports"));
+app.use("/api/chatbot", chatbotRoutes);
 
 //connect to mongodb database
 mongoose
@@ -56,7 +51,6 @@ mongoose
   .catch((err) => console.error("MongoDB connection error:", err)); //mongodb connection failed ho gaya, error print hoga
 
 //MULTER CONFIGURATION//
-
 const storage = multer.diskStorage({
   //multer.diskStorage() is used to configure the storage of the uploaded files(images). ye function multer ko batata hai ki uploaded files kaha store karni hai aur unka naam kya hoga.
   destination: path.join(__dirname, "./public"), //ye batata hai ki uploaded files kaha store karni hai.yaha public folder me store karne ka path diya hai. __dirname is the current directory of the server.js file.path.join() is used to join the current directory with the public folder.
@@ -225,6 +219,703 @@ const volunteer = new mongoose.model(
   }),
 );
 
+// Forgot Password - OTP and Reset Token Schema
+const passwordResetSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+    },
+
+    role: {
+      type: String,
+      enum: ["woman", "volunteer"],
+      required: true,
+    },
+
+    otpHash: {
+      type: String,
+      default: null,
+    },
+
+    otpFingerprint: {
+      type: String,
+      default: null,
+    },
+
+    otpStatus: {
+      type: String,
+      enum: [
+        "not_requested",
+        "pending",
+        "verified",
+        "expired",
+        "locked",
+        "used",
+      ],
+      default: "not_requested",
+    },
+
+    expiresAt: {
+      type: Date,
+      default: null,
+    },
+
+    attempts: {
+      type: Number,
+      default: 0,
+    },
+
+    generationCount: {
+      type: Number,
+      default: 0,
+    },
+
+    cooldownUntil: {
+      type: Date,
+      default: null,
+    },
+
+    lastGeneratedAt: {
+      type: Date,
+      default: null,
+    },
+
+    resetTokenHash: {
+      type: String,
+      default: null,
+    },
+
+    resetTokenExpiresAt: {
+      type: Date,
+      default: null,
+    },
+
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
+  },
+  { timestamps: true },
+);
+passwordResetSchema.index({ email: 1, role: 1 }, { unique: true });
+passwordResetSchema.index(
+  { otpFingerprint: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      otpFingerprint: { $type: "string" },
+    },
+  },
+);
+const passwordReset = mongoose.model("passwordReset", passwordResetSchema);
+
+// Generate secure 6-digit OTP
+function generateOTP() {
+  return crypto.randomInt(100000, 1000000).toString();
+}
+
+// Generate OTP fingerprint for duplicate checking
+function generateOTPFingerprint(otp) {
+  return crypto
+    .createHmac("sha256", process.env.OTP_FINGERPRINT_SECRET)
+    .update(otp)
+    .digest("hex");
+}
+
+// Generate a unique OTP by checking active fingerprints
+async function generateUniqueOTP() {
+  // Release fingerprints of expired OTPs
+  await passwordReset.updateMany(
+    {
+      otpFingerprint: { $type: "string" },
+      $or: [{ expiresAt: { $lte: new Date() } }, { expiresAt: null }],
+    },
+    {
+      $set: {
+        otpHash: null,
+        otpFingerprint: null,
+        otpStatus: "expired",
+        expiresAt: null,
+      },
+    },
+  );
+
+  for (let i = 0; i < 10; i++) {
+    const otp = generateOTP();
+    const otpFingerprint = generateOTPFingerprint(otp);
+    const existingOTP = await passwordReset.findOne({
+      otpFingerprint,
+    });
+    if (!existingOTP) {
+      return { otp, otpFingerprint };
+    }
+  }
+  throw new Error("Unable to generate a unique OTP. Please try again.");
+}
+
+// API for generating and sending Forgot Password OTP
+app.post("/api/forgot-password/send-otp", async (req, res) => {
+  try {
+    const { email, role } = req.body;
+    if (typeof email !== "string" || !email.trim() || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and role are required.",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!["woman", "volunteer"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user role.",
+      });
+    }
+
+    // Check account according to selected role
+    const user =
+      role === "woman"
+        ? await womanUser.findOne({ email: normalizedEmail })
+        : await volunteer.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "No account found with this email address. Please check your email and try again.",
+      });
+    }
+
+    const now = new Date();
+    let resetData = await passwordReset.findOne({
+      email: normalizedEmail,
+      role,
+    });
+    if (!resetData) {
+      resetData = new passwordReset({
+        email: normalizedEmail,
+        role,
+      });
+    }
+
+    // Check active cooldown
+    if (resetData.cooldownUntil && resetData.cooldownUntil > now) {
+      const remainingSeconds = Math.ceil(
+        (resetData.cooldownUntil - now) / 1000,
+      );
+      return res.status(429).json({
+        success: false,
+        message:
+          "You have reached the maximum OTP generation limit. Please try again after 24 hours.",
+        remainingSeconds,
+      });
+    }
+
+    // Reset generation count after cooldown expires
+    if (resetData.cooldownUntil && resetData.cooldownUntil <= now) {
+      resetData.generationCount = 0;
+      resetData.cooldownUntil = null;
+    }
+
+    // Maximum 5 OTP generations
+    if (resetData.generationCount >= 5) {
+      resetData.cooldownUntil = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      await resetData.save();
+      return res.status(429).json({
+        success: false,
+        message:
+          "You have reached the maximum OTP generation limit. Please try again after 24 hours.",
+        remainingSeconds: 24 * 60 * 60,
+      });
+    }
+
+    // Generate and save a unique OTP
+    const previousGenerationCount = resetData.generationCount;
+    let otp;
+    let otpSaved = false;
+
+    for (let i = 0; i < 10; i++) {
+      const generated = await generateUniqueOTP();
+      otp = generated.otp;
+      resetData.otpHash = await bcrypt.hash(otp, 10);
+      resetData.otpFingerprint = generated.otpFingerprint;
+      resetData.otpStatus = "pending";
+      resetData.expiresAt = new Date(now.getTime() + 60 * 1000);
+      resetData.attempts = 0;
+      resetData.generationCount = previousGenerationCount + 1;
+      resetData.lastGeneratedAt = now;
+
+      // Invalidate previous reset authorization
+      resetData.resetTokenHash = null;
+      resetData.resetTokenExpiresAt = null;
+      resetData.verifiedAt = null;
+      try {
+        await resetData.save();
+        otpSaved = true;
+        break;
+      } catch (error) {
+        // Retry only when the OTP fingerprint already exists
+        if (error.code === 11000) {
+          const duplicateFingerprint =
+            error.keyPattern?.otpFingerprint || error.keyValue?.otpFingerprint;
+
+          if (duplicateFingerprint) {
+            resetData.otpHash = null;
+            resetData.otpFingerprint = null;
+            continue;
+          }
+        }
+        throw error;
+      }
+    }
+    if (!otpSaved) {
+      throw new Error("Unable to generate a unique OTP. Please try again.");
+    }
+
+    // Send OTP through existing Gmail service
+    let mailResult;
+    try {
+      mailResult = await googleMailService.sendMail({
+        to: normalizedEmail,
+        subject: "SafeHer - Password Reset OTP",
+        text: `Your SafeHer password reset OTP is ${otp}. It is valid for 1 minute. Do not share this OTP with anyone.`,
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2 style="color: #172554;">SafeHer Password Reset</h2>
+            <p>Your OTP for resetting your password is:</p>
+            <h1 style="color: ${
+              role === "volunteer" ? "#16a085" : "#e83e8c"
+            }; letter-spacing: 5px;">${otp}</h1>
+            <p>This OTP is valid for <strong>1 minute</strong>.</p>
+            <p>If you did not request this, please ignore this email.</p>
+            <p>SafeHer Team</p>
+          </div>
+        `,
+      });
+    } catch (mailError) {
+      console.error("Forgot Password Email Error:", mailError);
+    }
+
+    // Email was not successfully delivered
+    if (!mailResult || !mailResult.success || mailResult.preview) {
+      resetData.otpHash = null;
+      resetData.otpFingerprint = null;
+      resetData.otpStatus = "not_requested";
+      resetData.expiresAt = null;
+      resetData.generationCount = previousGenerationCount;
+      resetData.cooldownUntil = null;
+
+      await resetData.save();
+      return res.status(503).json({
+        success: false,
+        message:
+          "Email service is not configured. Please check your Gmail settings.",
+      });
+    }
+
+    // Start 24-hour cooldown after the 5th successful email
+    if (resetData.generationCount === 5) {
+      resetData.cooldownUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await resetData.save();
+    }
+    return res.status(200).json({
+      success: true,
+      message: "OTP has been sent to your registered email address.",
+      otpStatus: resetData.otpStatus,
+      attempts: resetData.attempts,
+      generationCount: resetData.generationCount,
+      expiresAt: resetData.expiresAt,
+      cooldownUntil: resetData.cooldownUntil,
+    });
+  } catch (error) {
+    console.error("Forgot Password OTP Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to process your request. Please try again later.",
+    });
+  }
+});
+
+// API for verifying Forgot Password OTP
+app.post("/api/forgot-password/verify-otp", async (req, res) => {
+  try {
+    const { email, role, otp } = req.body;
+    if (typeof email !== "string" || !email.trim() || !role || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, role and OTP are required.",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!["woman", "volunteer"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user role.",
+      });
+    }
+    if (!/^\d{6}$/.test(String(otp))) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid 6-digit OTP.",
+      });
+    }
+    const resetData = await passwordReset.findOne({
+      email: normalizedEmail,
+      role,
+    });
+    if (!resetData) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP. Please request a new OTP.",
+      });
+    }
+
+    // Check whether OTP is already locked
+    if (resetData.otpStatus === "locked") {
+      return res.status(429).json({
+        success: false,
+        message: "Maximum OTP attempts reached. Please request a new OTP.",
+      });
+    }
+
+    // Check whether OTP is already verified
+    if (resetData.otpStatus === "verified") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "OTP has already been verified. Please continue to reset your password.",
+      });
+    }
+
+    // Check whether OTP has expired
+    if (
+      resetData.otpStatus === "expired" ||
+      (resetData.expiresAt && resetData.expiresAt <= new Date())
+    ) {
+      resetData.otpHash = null;
+      resetData.otpFingerprint = null;
+      resetData.otpStatus = "expired";
+      resetData.expiresAt = null;
+      await resetData.save();
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired. Please request a new OTP.",
+      });
+    }
+
+    // Only pending OTPs can be verified
+    if (
+      resetData.otpStatus !== "pending" ||
+      !resetData.otpHash ||
+      !resetData.expiresAt
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP. Please request a new OTP.",
+      });
+    }
+
+    // Maximum 5 incorrect attempts
+    if (resetData.attempts >= 5) {
+      resetData.otpHash = null;
+      resetData.otpFingerprint = null;
+      resetData.otpStatus = "locked";
+      resetData.expiresAt = null;
+      await resetData.save();
+      return res.status(429).json({
+        success: false,
+        message: "Maximum OTP attempts reached. Please request a new OTP.",
+      });
+    }
+
+    // Compare entered OTP with stored hash
+    const isOTPValid = await bcrypt.compare(String(otp), resetData.otpHash);
+    if (!isOTPValid) {
+      resetData.attempts += 1;
+      if (resetData.attempts >= 5) {
+        resetData.otpHash = null;
+        resetData.otpFingerprint = null;
+        resetData.otpStatus = "locked";
+        resetData.expiresAt = null;
+      }
+      await resetData.save();
+      return res.status(400).json({
+        success: false,
+        message:
+          resetData.attempts >= 5
+            ? "Maximum OTP attempts reached. Please request a new OTP."
+            : `Incorrect OTP. ${5 - resetData.attempts} attempts remaining.`,
+        otpStatus: resetData.otpStatus,
+        attempts: resetData.attempts,
+        generationCount: resetData.generationCount,
+        expiresAt: resetData.expiresAt,
+        cooldownUntil: resetData.cooldownUntil,
+      });
+    }
+
+    // Generate a secure password-reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    // Store only the SHA-256 hash of the token
+    const resetTokenHash = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    resetData.otpHash = null;
+    resetData.otpFingerprint = null;
+    resetData.otpStatus = "verified";
+    resetData.expiresAt = null;
+    resetData.resetTokenHash = resetTokenHash;
+
+    // Reset token valid for 10 minutes
+    resetData.resetTokenExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    resetData.verifiedAt = new Date();
+    await resetData.save();
+    return res.status(200).json({
+      success: true,
+      message: "OTP verified successfully.",
+      resetToken,
+    });
+  } catch (error) {
+    console.error("OTP Verification Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to verify OTP. Please try again later.",
+    });
+  }
+});
+
+// API for checking Forgot Password status (if page refresh ho then old limits hi return ho)
+app.get("/api/forgot-password/status", async (req, res) => {
+  try {
+    const { email, role } = req.query;
+    if (
+      typeof email !== "string" ||
+      !email.trim() ||
+      !["woman", "volunteer"].includes(role)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid email and role are required.",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const now = new Date();
+    const resetData = await passwordReset.findOne({
+      email: normalizedEmail,
+      role,
+    });
+
+    if (!resetData) {
+      return res.status(200).json({
+        success: true,
+        exists: false,
+        otpStatus: "not_requested",
+        attempts: 0,
+        generationCount: 0,
+        expiresAt: null,
+        cooldownUntil: null,
+        resetTokenExpiresAt: null,
+      });
+    }
+
+    // Mark expired OTP and release its fingerprint
+    if (
+      resetData.otpStatus === "pending" &&
+      resetData.expiresAt &&
+      resetData.expiresAt <= now
+    ) {
+      resetData.otpHash = null;
+      resetData.otpFingerprint = null;
+      resetData.otpStatus = "expired";
+      resetData.expiresAt = null;
+      await resetData.save();
+    }
+
+    // Clear expired reset authorization
+    if (
+      resetData.otpStatus === "verified" &&
+      resetData.resetTokenExpiresAt &&
+      resetData.resetTokenExpiresAt <= now
+    ) {
+      resetData.resetTokenHash = null;
+      resetData.resetTokenExpiresAt = null;
+      resetData.verifiedAt = null;
+      resetData.otpStatus = "used";
+      await resetData.save();
+    }
+
+    // Reset generation count only after cooldown has expired
+    if (resetData.cooldownUntil && resetData.cooldownUntil <= now) {
+      resetData.generationCount = 0;
+      resetData.cooldownUntil = null;
+      await resetData.save();
+    }
+    return res.status(200).json({
+      success: true,
+      exists: true,
+      otpStatus: resetData.otpStatus,
+      attempts: resetData.attempts,
+      generationCount: resetData.generationCount,
+      expiresAt: resetData.expiresAt,
+      cooldownUntil: resetData.cooldownUntil,
+      resetTokenExpiresAt: resetData.resetTokenExpiresAt,
+    });
+  } catch (error) {
+    console.error("Forgot Password Status Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to retrieve password reset status.",
+    });
+  }
+});
+
+// API for resetting password
+app.post("/api/forgot-password/reset-password", async (req, res) => {
+  try {
+    const { email, role, resetToken, newPassword } = req.body;
+    if (
+      typeof email !== "string" ||
+      !email.trim() ||
+      !role ||
+      typeof resetToken !== "string" ||
+      !resetToken ||
+      typeof newPassword !== "string" ||
+      !newPassword
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required.",
+      });
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!["woman", "volunteer"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user role.",
+      });
+    }
+
+    // Validate password length
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must contain at least 8 characters.",
+      });
+    }
+
+    // Find password reset record
+    const resetData = await passwordReset.findOne({
+      email: normalizedEmail,
+      role,
+    });
+    if (
+      !resetData ||
+      resetData.otpStatus !== "verified" ||
+      !resetData.resetTokenHash ||
+      !resetData.resetTokenExpiresAt ||
+      !resetData.verifiedAt
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid or expired reset authorization. Please verify OTP again.",
+      });
+    }
+
+    // Check reset token expiry
+    if (resetData.resetTokenExpiresAt <= new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset authorization has expired. Please verify OTP again.",
+      });
+    }
+
+    // Hash received token and compare
+    const receivedTokenHash = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+    if (receivedTokenHash !== resetData.resetTokenHash) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid reset authorization.",
+      });
+    }
+
+    // Find the existing user according to selected role
+    const user =
+      role === "woman"
+        ? await womanUser.findOne({ email: normalizedEmail })
+        : await volunteer.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "User account not found.",
+      });
+    }
+
+    // Check whether new password matches the current password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password cannot be the same as your current password.",
+      });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password according to selected role
+    const updatedUser =
+      role === "woman"
+        ? await womanUser.findOneAndUpdate(
+            { email: normalizedEmail },
+            { $set: { password: hashedPassword } },
+            { returnDocument: "after" },
+          )
+        : await volunteer.findOneAndUpdate(
+            { email: normalizedEmail },
+            { $set: { password: hashedPassword } },
+            { returnDocument: "after" },
+          );
+    if (!updatedUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Unable to update password.",
+      });
+    }
+
+    // Clear OTP and reset authorization
+    resetData.otpHash = null;
+    resetData.otpFingerprint = null;
+    resetData.otpStatus = "used";
+    resetData.expiresAt = null;
+    resetData.attempts = 0;
+    resetData.resetTokenHash = null;
+    resetData.resetTokenExpiresAt = null;
+    resetData.verifiedAt = null;
+    await resetData.save();
+    return res.status(200).json({
+      success: true,
+      message:
+        "Password reset successfully. Please log in with your new password.",
+    });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to reset password. Please try again later.",
+    });
+  }
+});
+
 //Admin schema
 const admin = new mongoose.model(
   "admin",
@@ -242,20 +933,36 @@ const admin = new mongoose.model(
 );
 
 // Fixed admin account
-admin.findOne({ email: "admin27@safeher.com" }).then(async (data) => {
-  if (!data) {
-    await admin.create({
-      name: "Komal Rathod",
-      email: "admin27@safeher.com",
-      password: "komal@27",
+async function createAdminAccount() {
+  try {
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (!adminEmail || !adminPassword) {
+      console.log("Admin credentials missing in .env file");
+      return;
+    }
+    const existingAdmin = await admin.findOne({
+      email: adminEmail,
     });
-    console.log("Fixed admin account created");
-  } else if (!data.name) {
-    data.name = "Komal Rathod";
-    await data.save();
-    console.log("Admin name updated");
+
+    if (existingAdmin) {
+      console.log("Admin account already exists");
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    await admin.create({
+      name: "SafeHer Admin",
+      email: adminEmail,
+      password: hashedPassword,
+    });
+    console.log("Fixed Admin account created successfully");
+  } catch (error) {
+    console.log("Admin account creation error:", error);
   }
-});
+}
+createAdminAccount();
 
 //safety-article schema
 const safetyArticle = new mongoose.model(
@@ -288,7 +995,7 @@ const safetyArea = new mongoose.model(
 );
 
 //Add Safety Area API for safetymap for admin
-app.post("/api/addsafetyarea", async (req, res) => {
+app.post("/api/addsafetyarea", requireAdminSession, async (req, res) => {
   try {
     const { location, type, description, latitude, longitude } = req.body;
 
@@ -383,92 +1090,100 @@ app.get("/api/getsafetyareas", async (req, res) => {
 });
 
 //Edit safety areas api for admin
-app.put("/api/editsafetyarea/:areaId", async (req, res) => {
-  try {
-    const { location, type, description, latitude, longitude } = req.body;
-    if (
-      typeof location !== "string" ||
-      !location.trim() ||
-      typeof description !== "string" ||
-      !description.trim() ||
-      !["Safe", "Caution"].includes(type)
-    ) {
-      return res.status(400).json({
-        message: "Please provide valid safety area details.",
+app.put(
+  "/api/editsafetyarea/:areaId",
+  requireAdminSession,
+  async (req, res) => {
+    try {
+      const { location, type, description, latitude, longitude } = req.body;
+      if (
+        typeof location !== "string" ||
+        !location.trim() ||
+        typeof description !== "string" ||
+        !description.trim() ||
+        !["Safe", "Caution"].includes(type)
+      ) {
+        return res.status(400).json({
+          message: "Please provide valid safety area details.",
+        });
+      }
+
+      const lat = Number(latitude);
+      const lng = Number(longitude);
+      if (
+        latitude === "" ||
+        latitude == null ||
+        longitude === "" ||
+        longitude == null ||
+        !Number.isFinite(lat) ||
+        lat < -90 ||
+        lat > 90 ||
+        !Number.isFinite(lng) ||
+        lng < -180 ||
+        lng > 180
+      ) {
+        return res.status(400).json({
+          message: "Please select a valid location on the map.",
+        });
+      }
+
+      const updatedArea = await safetyArea.findOneAndUpdate(
+        { areaId: req.params.areaId },
+        {
+          location: location.trim(),
+          type,
+          description: description.trim(),
+          latitude: lat,
+          longitude: lng,
+          updatedAt: new Date(),
+        },
+        { returnDocument: "after", runValidators: true },
+      );
+
+      if (!updatedArea) {
+        return res.status(404).json({
+          message: "Safety area not found.",
+        });
+      }
+      return res.status(200).json({
+        message: "Safety area updated successfully.",
+        safetyArea: updatedArea,
+      });
+    } catch (error) {
+      console.error("Edit Safety Area Error:", error);
+      return res.status(500).json({
+        message: "Failed to update safety area.",
       });
     }
-
-    const lat = Number(latitude);
-    const lng = Number(longitude);
-    if (
-      latitude === "" ||
-      latitude == null ||
-      longitude === "" ||
-      longitude == null ||
-      !Number.isFinite(lat) ||
-      lat < -90 ||
-      lat > 90 ||
-      !Number.isFinite(lng) ||
-      lng < -180 ||
-      lng > 180
-    ) {
-      return res.status(400).json({
-        message: "Please select a valid location on the map.",
-      });
-    }
-
-    const updatedArea = await safetyArea.findOneAndUpdate(
-      { areaId: req.params.areaId },
-      {
-        location: location.trim(),
-        type,
-        description: description.trim(),
-        latitude: lat,
-        longitude: lng,
-        updatedAt: new Date(),
-      },
-      { returnDocument: "after", runValidators: true },
-    );
-
-    if (!updatedArea) {
-      return res.status(404).json({
-        message: "Safety area not found.",
-      });
-    }
-    return res.status(200).json({
-      message: "Safety area updated successfully.",
-      safetyArea: updatedArea,
-    });
-  } catch (error) {
-    console.error("Edit Safety Area Error:", error);
-    return res.status(500).json({
-      message: "Failed to update safety area.",
-    });
-  }
-});
+  },
+);
 
 //Delete safety areas api for admin
-app.delete("/api/deletesafetyarea/:areaId", async (req, res) => {
-  try {
-    const deletedArea = await safetyArea.findOneAndDelete({
-      areaId: req.params.areaId,
-    });
+app.delete(
+  "/api/deletesafetyarea/:areaId",
+  requireAdminSession,
+  async (req, res) => {
+    try {
+      const deletedArea = await safetyArea.findOneAndDelete({
+        areaId: req.params.areaId,
+      });
 
-    if (!deletedArea) {
-      return res.status(404).json({
-        message: "Safety area not found.",
+      if (!deletedArea) {
+        return res.status(404).json({
+          message: "Safety area not found.",
+        });
+      }
+      return res.status(200).json({
+        message: "Safety area deleted successfully.",
+      });
+    } catch (error) {
+      console.error("Delete Safety Area Error:", error);
+      return res.status(500).json({
+        message: "Failed to delete safety area.",
       });
     }
-    return res.status(200).json({
-      message: "Safety area deleted successfully.",
-    });
-  } catch (error) {
-    console.error("Delete Safety Area Error:", error);
-    return res.status(500).json({
-      message: "Failed to delete safety area.",
-    });
-  }
-});
+  },
+);
 
 //Incident report schema
 const incidentReport = new mongoose.model(
@@ -490,11 +1205,11 @@ const incidentReport = new mongoose.model(
 //Add incident report API for women user
 app.post(
   "/api/addincidentreport",
+  requireWomanSession,
   incidentUpload.single("photo"),
   async (req, res) => {
     try {
       const {
-        womanId,
         incidentType,
         description,
         incidentDate,
@@ -504,7 +1219,6 @@ app.post(
 
       //validation
       if (
-        !womanId ||
         !incidentType ||
         !description ||
         !incidentDate ||
@@ -525,7 +1239,7 @@ app.post(
 
       //create incident report
       const report = await incidentReport.create({
-        womanId: womanId,
+        womanId: req.womanId,
         incidentType: incidentType,
         description: description,
         incidentDate: incidentDate,
@@ -548,20 +1262,29 @@ app.post(
 );
 
 //Get my incident reports API for woman user
-app.get("/api/getmyincidentreports/:womanId", async (req, res) => {
-  try {
-    const { womanId } = req.params;
-    const reports = await incidentReport
-      .find({ womanId: womanId })
-      .sort({ createdAt: -1 });
-    res.status(200).json(reports);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Error while fetching incident reports.",
-    });
-  }
-});
+app.get(
+  "/api/getmyincidentreports/:womanId",
+  requireWomanSession,
+  async (req, res) => {
+    try {
+      const { womanId } = req.params;
+      if (String(womanId) !== String(req.womanId)) {
+        return res.status(403).json({
+          message: "You are not authorized to access these reports.",
+        });
+      }
+      const reports = await incidentReport
+        .find({ womanId: req.womanId })
+        .sort({ createdAt: -1 });
+      return res.status(200).json(reports);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error while fetching incident reports.",
+      });
+    }
+  },
+);
 
 //Get reports PDF API
 app.get("/api/getreportspdf/:id", async (req, res) => {
@@ -728,97 +1451,109 @@ app.get("/api/getreportspdf/:id", async (req, res) => {
 });
 
 //Get all incident reports API for admin
-app.get("/api/getadminincidentreports", async (req, res) => {
-  try {
-    const reports = await incidentReport.find().sort({ createdAt: -1 });
-    const reportsWithWoman = await Promise.all(
-      reports.map(async (report, index) => {
-        const woman = await womanUser
-          .findById(report.womanId)
-          .select("fullName phoneNumber");
-        return {
-          reportNumber: index + 1,
-          _id: report._id,
-          womanId: report.womanId,
-          womanName: woman ? woman.fullName : "Unknown",
-          phone: woman ? woman.phoneNumber : "Not Available",
-          incidentType: report.incidentType,
-          description: report.description,
-          incidentDate: report.incidentDate,
-          incidentTime: report.incidentTime,
-          photo: report.photo,
-          location: report.location,
-          status: report.status,
-          adminRemarks: report.adminRemarks,
-          createdAt: report.createdAt,
-        };
-      }),
-    );
-    res.status(200).json(reportsWithWoman);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Error while fetching incident reports.",
-    });
-  }
-});
+app.get(
+  "/api/getadminincidentreports",
+  requireAdminSession,
+  async (req, res) => {
+    try {
+      const reports = await incidentReport.find().sort({ createdAt: -1 });
+      const reportsWithWoman = await Promise.all(
+        reports.map(async (report, index) => {
+          const woman = await womanUser
+            .findById(report.womanId)
+            .select("fullName phoneNumber");
+          return {
+            reportNumber: index + 1,
+            _id: report._id,
+            womanId: report.womanId,
+            womanName: woman ? woman.fullName : "Unknown",
+            phone: woman ? woman.phoneNumber : "Not Available",
+            incidentType: report.incidentType,
+            description: report.description,
+            incidentDate: report.incidentDate,
+            incidentTime: report.incidentTime,
+            photo: report.photo,
+            location: report.location,
+            status: report.status,
+            adminRemarks: report.adminRemarks,
+            createdAt: report.createdAt,
+          };
+        }),
+      );
+      res.status(200).json(reportsWithWoman);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error while fetching incident reports.",
+      });
+    }
+  },
+);
 
 //Verify incident report status API for admin
-app.put("/api/verifyincidentreport/:id", async (req, res) => {
-  try {
-    const report = await incidentReport.findByIdAndUpdate(
-      req.params.id,
-      { status: "Verified" },
-      { returnDocument: "after" },
-    );
-    if (!report) {
-      return res.status(404).json({
-        message: "Incident report not found.",
+app.put(
+  "/api/verifyincidentreport/:id",
+  requireAdminSession,
+  async (req, res) => {
+    try {
+      const report = await incidentReport.findByIdAndUpdate(
+        req.params.id,
+        { status: "Verified" },
+        { returnDocument: "after" },
+      );
+      if (!report) {
+        return res.status(404).json({
+          message: "Incident report not found.",
+        });
+      }
+      res.status(200).json({
+        message: "Incident report verified successfully.",
+        report: report,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error while verifying incident report.",
       });
     }
-    res.status(200).json({
-      message: "Incident report verified successfully.",
-      report: report,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Error while verifying incident report.",
-    });
-  }
-});
+  },
+);
 
 //Reject incident report status API for admin
-app.put("/api/rejectincidentreport/:id", async (req, res) => {
-  try {
-    const { adminRemarks } = req.body;
-    if (!adminRemarks || !adminRemarks.trim()) {
-      return res.status(400).json({
-        message: "Rejection reason is required.",
-      });
-    }
+app.put(
+  "/api/rejectincidentreport/:id",
+  requireAdminSession,
+  async (req, res) => {
+    try {
+      const { adminRemarks } = req.body;
+      if (!adminRemarks || !adminRemarks.trim()) {
+        return res.status(400).json({
+          message: "Rejection reason is required.",
+        });
+      }
 
-    const report = await incidentReport.findByIdAndUpdate(
-      req.params.id,
-      { status: "Rejected", adminRemarks: adminRemarks.trim() },
-      { returnDocument: "after" },
-    );
-    if (!report) {
-      return res.status(404).json({
-        message: "Incident report not found.",
+      const report = await incidentReport.findByIdAndUpdate(
+        req.params.id,
+        { status: "Rejected", adminRemarks: adminRemarks.trim() },
+        { returnDocument: "after" },
+      );
+      if (!report) {
+        return res.status(404).json({
+          message: "Incident report not found.",
+        });
+      }
+      res.status(200).json({
+        message: "Incident report rejected successfully.",
+        report: report,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error while rejecting incident report.",
       });
     }
-    res.status(200).json({
-      message: "Incident report rejected successfully.",
-      report: report,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Error while rejecting incident report.",
-    });
-  }
-});
+  },
+);
 
 //Get verified incident reports API for volunteer
 app.get("/api/getverifiedincidentreports", async (req, res) => {
@@ -838,6 +1573,7 @@ app.get("/api/getverifiedincidentreports", async (req, res) => {
 //add safety article API for admin
 app.post(
   "/api/addsafetyarticle",
+  requireAdminSession,
   articleUpload.single("image"),
   async (req, res) => {
     try {
@@ -872,7 +1608,7 @@ app.post(
   },
 );
 
-//Get all safety articles
+//Get all safety articles for admin
 app.get("/api/getsafetyarticles", async (req, res) => {
   try {
     const data = await safetyArticle.find().sort({ createdAt: -1 });
@@ -907,6 +1643,7 @@ app.get("/api/getsafetyarticle/:_id", async (req, res) => {
 // Edit Safety Article
 app.put(
   "/api/editsafetyarticle/:_id",
+  requireAdminSession,
   articleUpload.single("image"),
   async (req, res) => {
     try {
@@ -953,35 +1690,39 @@ app.put(
 );
 
 // DELETE SAFETY ARTICLE API
-app.delete("/api/deletesafetyarticle/:_id", async (req, res) => {
-  try {
-    const _id = req.params._id;
-    const article = await safetyArticle.findById(_id);
-    if (!article) {
-      return res.status(404).json({
-        message: "Safety article not found.",
+app.delete(
+  "/api/deletesafetyarticle/:_id",
+  requireAdminSession,
+  async (req, res) => {
+    try {
+      const _id = req.params._id;
+      const article = await safetyArticle.findById(_id);
+      if (!article) {
+        return res.status(404).json({
+          message: "Safety article not found.",
+        });
+      }
+
+      // Delete article image from articles folder
+      if (article.image) {
+        const imagePath = path.join(articleFolder, article.image);
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+      }
+
+      await safetyArticle.findByIdAndDelete(_id);
+      res.status(200).json({
+        message: "Safety article deleted successfully.",
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error while deleting safety article.",
       });
     }
-
-    // Delete article image from articles folder
-    if (article.image) {
-      const imagePath = path.join(articleFolder, article.image);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
-    }
-
-    await safetyArticle.findByIdAndDelete(_id);
-    res.status(200).json({
-      message: "Safety article deleted successfully.",
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Error while deleting safety article.",
-    });
-  }
-});
+  },
+);
 
 // Registration API for woman user
 app.post("/api/womanregister", multi, async (req, res) => {
@@ -1047,8 +1788,12 @@ app.post("/api/womanlogin", async (req, res) => {
 
     //remove password before sending response
     const safeUser = user.toObject();
+    const sessionToken = createWomanSessionToken(user._id);
     delete safeUser.password;
-    return res.status(200).json(safeUser);
+    return res.status(200).json({
+      ...safeUser,
+      sessionToken,
+    });
   } catch (error) {
     console.error("Error during woman user login:", error);
     return res.status(500).json({
@@ -1057,15 +1802,22 @@ app.post("/api/womanlogin", async (req, res) => {
   }
 });
 
-app.put("/api/womanactivity/:_id", async (req, res) => {
+//Woman user activity update API for updating last active time and status
+app.put("/api/womanactivity/:_id", requireWomanSession, async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params._id)) {
       return res.status(400).json({ message: "Invalid woman user ID." });
     }
 
+    if (String(req.params._id) !== String(req.womanId)) {
+      return res.status(403).json({
+        message: "You are not authorized to update this activity.",
+      });
+    }
+
     const user = await womanUser
       .findByIdAndUpdate(
-        req.params._id,
+        req.womanId,
         {
           $set: {
             status: "Active",
@@ -1093,99 +1845,9 @@ app.put("/api/womanactivity/:_id", async (req, res) => {
   }
 });
 
-//Trusted Contact API
-app.post("/api/addTrustedContact", async (req, res) => {
+//Trusted Contact API for woman
+app.post("/api/addTrustedContact", requireWomanSession, async (req, res) => {
   try {
-    const { womanId, contactName, relationship, email } = req.body;
-    const phoneNo =
-      typeof req.body.phoneNo === "string" ? req.body.phoneNo.trim() : "";
-    const normalizedEmail =
-      typeof email === "string" ? email.trim().toLowerCase() : "";
-
-    if (!womanId || !contactName || !relationship || !normalizedEmail) {
-      return res.status(400).json({
-        message: "Contact name, relationship, and email are required.",
-      });
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      return res.status(400).json({
-        message: "Please enter a valid email address.",
-      });
-    }
-
-    const duplicateConditions = [{ womanId, email: normalizedEmail }];
-    if (phoneNo) duplicateConditions.push({ womanId, phoneNo });
-    const exists = await trustedContact.findOne({
-      $or: duplicateConditions,
-    });
-
-    if (exists) {
-      return res.status(400).json({
-        message: "This trusted contact is already added.",
-      });
-    }
-
-    const contact = await trustedContact.create({
-      womanId: womanId,
-      contactName: contactName.trim(),
-      relationship: relationship,
-      phoneNo,
-      email: normalizedEmail,
-    });
-
-    res.status(201).json({
-      message: "Trusted Contact Added Successfully",
-      contact: contact,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Error while adding trusted contact",
-    });
-  }
-});
-
-//Get Trusted Contacts API for fetching  contacts
-app.get("/api/getTrustedContacts/:womanId", async (req, res) => {
-  try {
-    const { womanId } = req.params;
-    const contacts = await trustedContact.find({ womanId: womanId });
-    res.status(200).json(contacts);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Error while fetching trusted contacts.",
-    });
-  }
-});
-
-//Delete Trusted Contact API
-app.delete("/api/deleteTrustedContact/:_id", async (req, res) => {
-  try {
-    const { _id } = req.params;
-    const contact = await trustedContact.findById(_id);
-    if (!contact) {
-      return res.status(404).json({
-        message: "Trusted contact not found.",
-      });
-    }
-    await trustedContact.findByIdAndDelete(_id);
-    res.status(200).json({
-      message: "Trusted contact deleted successfully.",
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Error while deleting trusted contact.",
-    });
-  }
-});
-
-//Edit Trusted Contact API
-app.put("/api/editTrustedContact/:_id", async (req, res) => {
-  try {
-    const { _id } = req.params;
     const { contactName, relationship, email } = req.body;
     const phoneNo =
       typeof req.body.phoneNo === "string" ? req.body.phoneNo.trim() : "";
@@ -1204,52 +1866,167 @@ app.put("/api/editTrustedContact/:_id", async (req, res) => {
       });
     }
 
-    // Check if the contact exists
-    const contact = await trustedContact.findById(_id);
-    if (!contact) {
-      return res.status(404).json({
-        message: "Trusted contact not found.",
-      });
-    }
-
     const duplicateConditions = [
-      { womanId: contact.womanId, email: normalizedEmail },
+      { womanId: req.womanId, email: normalizedEmail },
     ];
-    if (phoneNo) {
-      duplicateConditions.push({
-        womanId: contact.womanId,
-        phoneNo,
-      });
-    }
-    const duplicate = await trustedContact.findOne({
-      _id: { $ne: _id },
+    if (phoneNo) duplicateConditions.push({ womanId: req.womanId, phoneNo });
+    const exists = await trustedContact.findOne({
       $or: duplicateConditions,
     });
 
-    if (duplicate) {
+    if (exists) {
       return res.status(400).json({
         message: "This trusted contact is already added.",
       });
     }
 
-    // Update the contact
-    contact.contactName = contactName.trim();
-    contact.relationship = relationship;
-    contact.phoneNo = phoneNo;
-    contact.email = normalizedEmail;
+    const contact = await trustedContact.create({
+      womanId: req.womanId,
+      contactName: contactName.trim(),
+      relationship: relationship,
+      phoneNo,
+      email: normalizedEmail,
+    });
 
-    await contact.save();
-    res.status(200).json({
-      message: "Trusted contact updated successfully.",
-      contact: contact,
+    res.status(201).json({
+      message: "Trusted Contact Added Successfully",
+      contact,
     });
   } catch (error) {
     console.log(error);
     res.status(500).json({
-      message: "Error while updating trusted contact.",
+      message: "Error while adding trusted contact",
     });
   }
 });
+
+//Get Trusted Contacts API for fetching  contacts
+app.get(
+  "/api/getTrustedContacts/:womanId",
+  requireWomanSession,
+  async (req, res) => {
+    try {
+      const { womanId } = req.params;
+      if (String(womanId) !== String(req.womanId)) {
+        return res.status(403).json({
+          message: "You are not authorized to access these contacts.",
+        });
+      }
+      const contacts = await trustedContact.find({ womanId: req.womanId });
+      res.status(200).json(contacts);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error while fetching trusted contacts.",
+      });
+    }
+  },
+);
+
+//Delete Trusted Contact API
+app.delete(
+  "/api/deleteTrustedContact/:_id",
+  requireWomanSession,
+  async (req, res) => {
+    try {
+      const { _id } = req.params;
+      const contact = await trustedContact.findOne({
+        _id,
+        womanId: req.womanId,
+      });
+      if (!contact) {
+        return res.status(404).json({
+          message: "Trusted contact not found.",
+        });
+      }
+      await trustedContact.findByIdAndDelete(_id);
+      res.status(200).json({
+        message: "Trusted contact deleted successfully.",
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error while deleting trusted contact.",
+      });
+    }
+  },
+);
+
+//Edit Trusted Contact API
+app.put(
+  "/api/editTrustedContact/:_id",
+  requireWomanSession,
+  async (req, res) => {
+    try {
+      const { _id } = req.params;
+      const { contactName, relationship, email } = req.body;
+      const phoneNo =
+        typeof req.body.phoneNo === "string" ? req.body.phoneNo.trim() : "";
+      const normalizedEmail =
+        typeof email === "string" ? email.trim().toLowerCase() : "";
+
+      if (!contactName || !relationship || !normalizedEmail) {
+        return res.status(400).json({
+          message: "Contact name, relationship, and email are required.",
+        });
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        return res.status(400).json({
+          message: "Please enter a valid email address.",
+        });
+      }
+
+      // Check if the contact exists
+      const contact = await trustedContact.findOne({
+        _id,
+        womanId: req.womanId,
+      });
+      if (!contact) {
+        return res.status(404).json({
+          message: "Trusted contact not found.",
+        });
+      }
+
+      const duplicateConditions = [
+        { womanId: req.womanId, email: normalizedEmail },
+      ];
+      if (phoneNo) {
+        duplicateConditions.push({
+          womanId: req.womanId,
+          phoneNo,
+        });
+      }
+      const duplicate = await trustedContact.findOne({
+        _id: { $ne: _id },
+        $or: duplicateConditions,
+      });
+
+      if (duplicate) {
+        return res.status(400).json({
+          message: "This trusted contact is already added.",
+        });
+      }
+
+      // Update the contact
+      contact.contactName = contactName.trim();
+      contact.relationship = relationship;
+      contact.phoneNo = phoneNo;
+      contact.email = normalizedEmail;
+
+      await contact.save();
+      res.status(200).json({
+        message: "Trusted contact updated successfully.",
+        contact,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error while updating trusted contact.",
+      });
+    }
+  },
+);
 
 //Registration API for Volunteer
 app.post("/api/volunteerregister", multi1, async (req, res) => {
@@ -1328,6 +2105,7 @@ app.post("/api/volunteerlogin", async (req, res) => {
   }
 
   if (user.status === "Approved") {
+    const sessionToken = createVolunteerSessionToken(user._id);
     return res.status(200).send({
       status: "Approved",
       _id: user._id,
@@ -1335,6 +2113,7 @@ app.post("/api/volunteerlogin", async (req, res) => {
       email: user.email,
       contact_no: user.contact_no || "",
       profile_photo: user.profile_photo || "",
+      sessionToken,
     });
   }
 
@@ -1346,32 +2125,36 @@ app.post("/api/volunteerlogin", async (req, res) => {
 });
 
 //Get volunteer data into admin
-app.get("/api/getvolunteer", async (req, res) => {
+app.get("/api/getvolunteer", requireAdminSession, async (req, res) => {
   res.json(await volunteer.find().select("-password"));
 });
 
 //get volunteer data using particular id
-app.get("/api/getvolunteerdetails/:_id", async (req, res) => {
-  try {
-    const _id = req.params._id;
-    const data = await volunteer.findById(_id).select("-password");
-    if (!data) {
-      return res.status(404).json({
-        message: "Volunteer not found",
+app.get(
+  "/api/getvolunteerdetails/:_id",
+  requireAdminSession,
+  async (req, res) => {
+    try {
+      const _id = req.params._id;
+      const data = await volunteer.findById(_id).select("-password");
+      if (!data) {
+        return res.status(404).json({
+          message: "Volunteer not found",
+        });
+      }
+
+      res.json(data);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Server error",
       });
     }
-
-    res.json(data);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Server error",
-    });
-  }
-});
+  },
+);
 
 //change approve status for volunteer
-app.put("/api/approvestatus/:_id", async (req, res) => {
+app.put("/api/approvestatus/:_id", requireAdminSession, async (req, res) => {
   try {
     const _id = req.params._id;
     await volunteer.updateOne({ _id: _id }, { $set: { status: "Approved" } });
@@ -1388,7 +2171,7 @@ app.put("/api/approvestatus/:_id", async (req, res) => {
 });
 
 //change reject status for volunteer
-app.put("/api/rejectstatus/:_id", async (req, res) => {
+app.put("/api/rejectstatus/:_id", requireAdminSession, async (req, res) => {
   try {
     const _id = req.params._id;
     await volunteer.updateOne({ _id: _id }, { $set: { status: "Rejected" } });
@@ -1404,146 +2187,170 @@ app.put("/api/rejectstatus/:_id", async (req, res) => {
 });
 
 //Get volunteer data for volunteer profile
-app.get("/api/getvolunteerprofile/:_id", async (req, res) => {
-  try {
-    const volunteerData = await volunteer
-      .findById(req.params._id)
-      .select("-password");
-    if (!volunteerData) {
-      return res.status(404).json({
-        message: "Volunteer not found.",
+app.get(
+  "/api/getvolunteerprofile/:_id",
+  requireVolunteerSession,
+  async (req, res) => {
+    try {
+      if (String(req.params._id) !== String(req.volunteerId)) {
+        return res.status(403).json({
+          message: "You are not authorized to access this profile.",
+        });
+      }
+      const volunteerData = await volunteer
+        .findById(req.volunteerId)
+        .select("-password");
+      if (!volunteerData) {
+        return res.status(404).json({
+          message: "Volunteer not found.",
+        });
+      }
+      res.status(200).json(volunteerData);
+    } catch (error) {
+      console.log("Get volunteer profile error:", error);
+      res.status(500).json({
+        message: "Server error.",
       });
     }
-    res.status(200).json(volunteerData);
-  } catch (error) {
-    console.log("Get volunteer profile error:", error);
-    res.status(500).json({
-      message: "Server error.",
-    });
-  }
-});
+  },
+);
 
 // Update Volunteer Profile
-app.put("/api/updatevolunteerprofile/:_id", async (req, res) => {
-  try {
-    console.log("Request Body:", req.body);
-    const { _id } = req.params;
-    const {
-      name,
-      contact_no,
-      city,
-      state,
-      pincode,
-      address,
-      qualification,
-      serviceArea,
-      reason,
-    } = req.body;
+app.put(
+  "/api/updatevolunteerprofile/:_id",
+  requireVolunteerSession,
+  async (req, res) => {
+    try {
+      console.log("Request Body:", req.body);
+      const { _id } = req.params;
+      if (String(_id) !== String(req.volunteerId)) {
+        return res.status(403).json({
+          message: "You are not authorized to update this profile.",
+        });
+      }
+      const {
+        name,
+        contact_no,
+        city,
+        state,
+        pincode,
+        address,
+        qualification,
+        serviceArea,
+        reason,
+      } = req.body;
 
-    // Required field validation
-    if (
-      !name ||
-      !contact_no ||
-      !city ||
-      !state ||
-      !pincode ||
-      !address ||
-      !qualification ||
-      !serviceArea ||
-      !reason
-    ) {
-      return res.status(400).json({
-        message: "Please fill all required fields.",
+      // Required field validation
+      if (
+        !name ||
+        !contact_no ||
+        !city ||
+        !state ||
+        !pincode ||
+        !address ||
+        !qualification ||
+        !serviceArea ||
+        !reason
+      ) {
+        return res.status(400).json({
+          message: "Please fill all required fields.",
+        });
+      }
+
+      // Check volunteer exists
+      const volunteerData = await volunteer.findById(req.volunteerId);
+      if (!volunteerData) {
+        return res.status(404).json({
+          message: "Volunteer not found.",
+        });
+      }
+
+      // Check whether profile details actually changed for activity history
+      const profileFields = {
+        name: name.trim(),
+        contact_no: contact_no.trim(),
+        city: city.trim(),
+        state: state.trim(),
+        pincode: pincode.trim(),
+        address: address.trim(),
+        qualification: qualification.trim(),
+        serviceArea: serviceArea.trim(),
+        reason: reason.trim(),
+      };
+
+      const changedFields = Object.keys(profileFields)
+        .filter(
+          (field) =>
+            String(volunteerData[field] ?? "").trim() !== profileFields[field],
+        )
+        .map((field) => {
+          const fieldNames = {
+            name: "Name",
+            contact_no: "Contact Number",
+            city: "City",
+            state: "State",
+            pincode: "Pincode",
+            address: "Address",
+            qualification: "Qualification",
+            serviceArea: "Service Area",
+            reason: "Reason",
+          };
+
+          return `${fieldNames[field]} updated to ${profileFields[field]}`;
+        });
+
+      // Update only editable fields
+      volunteerData.name = name.trim();
+      volunteerData.contact_no = contact_no.trim();
+      volunteerData.city = city.trim();
+      volunteerData.state = state.trim();
+      volunteerData.pincode = pincode.trim();
+      volunteerData.address = address.trim();
+      volunteerData.qualification = qualification.trim();
+      volunteerData.serviceArea = serviceArea.trim();
+      volunteerData.reason = reason.trim();
+
+      await volunteerData.save();
+      // Log profile changes only when details actually changed
+      if (changedFields.length > 0) {
+        await volunteerActivity.create({
+          volunteerId: String(volunteerData._id),
+          type: "PROFILE_UPDATED",
+          title: "Profile Updated",
+          description: changedFields.join(", ") + ".",
+        });
+      }
+      res.status(200).json({
+        message: "Profile updated successfully.",
+        volunteer: volunteerData,
+      });
+    } catch (error) {
+      console.log("Update volunteer profile error:", error);
+      res.status(500).json({
+        message: "Server error.",
       });
     }
-
-    // Check volunteer exists
-    const volunteerData = await volunteer.findById(_id);
-    if (!volunteerData) {
-      return res.status(404).json({
-        message: "Volunteer not found.",
-      });
-    }
-
-    // Check whether profile details actually changed for activity history
-    const profileFields = {
-      name: name.trim(),
-      contact_no: contact_no.trim(),
-      city: city.trim(),
-      state: state.trim(),
-      pincode: pincode.trim(),
-      address: address.trim(),
-      qualification: qualification.trim(),
-      serviceArea: serviceArea.trim(),
-      reason: reason.trim(),
-    };
-
-    const changedFields = Object.keys(profileFields)
-      .filter(
-        (field) =>
-          String(volunteerData[field] ?? "").trim() !== profileFields[field],
-      )
-      .map((field) => {
-        const fieldNames = {
-          name: "Name",
-          contact_no: "Contact Number",
-          city: "City",
-          state: "State",
-          pincode: "Pincode",
-          address: "Address",
-          qualification: "Qualification",
-          serviceArea: "Service Area",
-          reason: "Reason",
-        };
-
-        return `${fieldNames[field]} updated to ${profileFields[field]}`;
-      });
-
-    // Update only editable fields
-    volunteerData.name = name.trim();
-    volunteerData.contact_no = contact_no.trim();
-    volunteerData.city = city.trim();
-    volunteerData.state = state.trim();
-    volunteerData.pincode = pincode.trim();
-    volunteerData.address = address.trim();
-    volunteerData.qualification = qualification.trim();
-    volunteerData.serviceArea = serviceArea.trim();
-    volunteerData.reason = reason.trim();
-
-    await volunteerData.save();
-    // Log profile changes only when details actually changed
-    if (changedFields.length > 0) {
-      await volunteerActivity.create({
-        volunteerId: String(volunteerData._id),
-        type: "PROFILE_UPDATED",
-        title: "Profile Updated",
-        description: changedFields.join(", ") + ".",
-      });
-    }
-    res.status(200).json({
-      message: "Profile updated successfully.",
-      volunteer: volunteerData,
-    });
-  } catch (error) {
-    console.log("Update volunteer profile error:", error);
-    res.status(500).json({
-      message: "Server error.",
-    });
-  }
-});
+  },
+);
 
 // Update Volunteer Profile Photo
 app.put(
   "/api/updatevolunteerphoto/:_id",
+  requireVolunteerSession,
   upload1.single("profilePhoto"),
   async (req, res) => {
     let profilePhotoSaved = false;
 
     try {
       const { _id } = req.params;
+      if (String(_id) !== String(req.volunteerId)) {
+        return res.status(403).json({
+          message: "You are not authorized to update this profile photo.",
+        });
+      }
 
       // Check volunteer exists
-      const volunteerData = await volunteer.findById(_id);
+      const volunteerData = await volunteer.findById(req.volunteerId);
 
       if (!volunteerData) {
         // Delete uploaded file if volunteer does not exist
@@ -1609,129 +2416,131 @@ app.put(
 );
 
 // Update Volunteer password API for My profile page
-app.put("/api/updatevolunteerpassword/:user_id", async (req, res) => {
-  const { user_id } = req.params;
-  const { currentPassword, password } = req.body;
-  if (!currentPassword || !password) {
-    return res.status(400).json({
-      status: "Invalid",
-      message: "Current password and new password are required",
-    });
-  }
-  if (password.length < 6) {
-    return res.status(400).json({
-      status: "Invalid",
-      message: " New Password must be at least 6 characters long",
-    });
-  }
-
-  try {
-    const existingUser = await volunteer.findById(user_id);
-    if (!existingUser) {
-      return res.status(404).json({
+app.put(
+  "/api/updatevolunteerpassword/:user_id",
+  requireVolunteerSession,
+  async (req, res) => {
+    const { user_id } = req.params;
+    if (String(user_id) !== String(req.volunteerId)) {
+      return res.status(403).json({
         status: "Invalid",
-        message: "Volunteer not found",
+        message: "You are not authorized to update this password.",
       });
     }
-
-    const isPasswordValid = await bcrypt.compare(
-      currentPassword,
-      existingUser.password,
-    );
-    if (!isPasswordValid) {
+    const { currentPassword, password } = req.body;
+    if (!currentPassword || !password) {
       return res.status(400).json({
         status: "Invalid",
-        message: "Current password is incorrect",
+        message: "Current password and new password are required",
+      });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({
+        status: "Invalid",
+        message: " New Password must be at least 6 characters long",
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
-    existingUser.password = hashedPassword;
-    await existingUser.save();
-    res.status(200).json({
-      status: "Success",
-      message: "Password updated successfully",
-    });
-  } catch (error) {
-    console.log("Volunteer Password Update Error:", error);
-    res.status(500).json({
-      status: "Error",
-      message: "Unable to update password",
-    });
-  }
-});
+    try {
+      const existingUser = await volunteer.findById(req.volunteerId);
+      if (!existingUser) {
+        return res.status(404).json({
+          status: "Invalid",
+          message: "Volunteer not found",
+        });
+      }
+
+      const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        existingUser.password,
+      );
+      if (!isPasswordValid) {
+        return res.status(400).json({
+          status: "Invalid",
+          message: "Current password is incorrect",
+        });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 12);
+      existingUser.password = hashedPassword;
+      await existingUser.save();
+      res.status(200).json({
+        status: "Success",
+        message: "Password updated successfully",
+      });
+    } catch (error) {
+      console.log("Volunteer Password Update Error:", error);
+      res.status(500).json({
+        status: "Error",
+        message: "Unable to update password",
+      });
+    }
+  },
+);
 
 /* Get Volunteer Activity History */
-app.get("/api/volunteer-activity/:volunteerId", async (req, res) => {
-  try {
-    const { volunteerId } = req.params;
+app.get(
+  "/api/volunteer-activity/:volunteerId",
+  requireVolunteerSession,
+  async (req, res) => {
+    try {
+      const { volunteerId } = req.params;
+      if (String(volunteerId) !== String(req.volunteerId)) {
+        return res.status(403).json({
+          message: "You are not authorized to view this activity history.",
+        });
+      }
 
-    if (!mongoose.Types.ObjectId.isValid(volunteerId)) {
-      return res.status(400).json({
-        message: "Invalid volunteer ID.",
+      if (!mongoose.Types.ObjectId.isValid(volunteerId)) {
+        return res.status(400).json({
+          message: "Invalid volunteer ID.",
+        });
+      }
+
+      const activities = await volunteerActivity
+        .find({ volunteerId })
+        .sort({ createdAt: -1 })
+        .limit(200)
+        .select("type title description createdAt");
+
+      return res.status(200).json({
+        message: "Activity history fetched successfully.",
+        activities,
+      });
+    } catch (error) {
+      console.error("Volunteer activity history error:", error);
+
+      return res.status(500).json({
+        message: "Failed to fetch activity history.",
       });
     }
+  },
+);
 
-    const activities = await volunteerActivity
-      .find({ volunteerId })
-      .sort({ createdAt: -1 })
-      .limit(200)
-      .select("type title description createdAt");
-
-    return res.status(200).json({
-      message: "Activity history fetched successfully.",
-      activities,
-    });
-  } catch (error) {
-    console.error("Volunteer activity history error:", error);
-
-    return res.status(500).json({
-      message: "Failed to fetch activity history.",
-    });
-  }
-});
-
-//Admin login API
+//Generate Token for Admin
 function createAdminSessionToken(adminId) {
-  const payload = Buffer.from(
-    JSON.stringify({
+  return jwt.sign(
+    {
       adminId: String(adminId),
-      expiresAt: Date.now() + 8 * 60 * 60 * 1000,
-    }),
-  ).toString("base64url");
-  const signature = crypto
-    .createHmac("sha256", adminSessionSecret)
-    .update(payload)
-    .digest("base64url");
-
-  return `${payload}.${signature}`;
+      role: "admin",
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "8h",
+      algorithm: "HS256",
+    },
+  );
 }
 
 function decodeAdminSessionToken(token) {
   try {
-    const [payload, signature, extra] = String(token || "").split(".");
-    if (!payload || !signature || extra) return null;
+    const session = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ["HS256"],
+    });
 
-    const expectedSignature = crypto
-      .createHmac("sha256", adminSessionSecret)
-      .update(payload)
-      .digest("base64url");
-    const providedBytes = Buffer.from(signature);
-    const expectedBytes = Buffer.from(expectedSignature);
     if (
-      providedBytes.length !== expectedBytes.length ||
-      !crypto.timingSafeEqual(providedBytes, expectedBytes)
-    ) {
-      return null;
-    }
-
-    const session = JSON.parse(
-      Buffer.from(payload, "base64url").toString("utf8"),
-    );
-    if (
-      !mongoose.Types.ObjectId.isValid(session.adminId) ||
-      !Number.isFinite(session.expiresAt) ||
-      session.expiresAt <= Date.now()
+      session.role !== "admin" ||
+      !mongoose.Types.ObjectId.isValid(session.adminId)
     ) {
       return null;
     }
@@ -1745,18 +2554,20 @@ function decodeAdminSessionToken(token) {
 async function requireAdminSession(req, res, next) {
   const authorization = req.get("authorization") || "";
   const token = authorization.startsWith("Bearer ")
-    ? authorization.slice("Bearer ".length)
+    ? authorization.slice("Bearer ".length).trim()
     : "";
-  const session = decodeAdminSessionToken(token);
 
+  const session = decodeAdminSessionToken(token);
   if (!session) {
     return res.status(401).json({
       message: "Admin session is missing or expired. Please sign in again.",
     });
   }
-
   try {
-    const existingAdmin = await admin.exists({ _id: session.adminId });
+    const existingAdmin = await admin.exists({
+      _id: session.adminId,
+    });
+
     if (!existingAdmin) {
       return res.status(401).json({
         message: "Admin account is no longer available. Please sign in again.",
@@ -1767,82 +2578,309 @@ async function requireAdminSession(req, res, next) {
     return next();
   } catch (error) {
     console.error("Error verifying admin session:", error);
+
     return res.status(500).json({
       message: "Unable to verify admin session.",
     });
   }
 }
 
-app.post("/api/adminlogin", async (req, res) => {
-  const { email, password } = req.body;
+//Generate Token for Volunteer
+function createVolunteerSessionToken(volunteerId) {
+  return jwt.sign(
+    {
+      volunteerId: String(volunteerId),
+      role: "volunteer",
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "8h",
+      algorithm: "HS256",
+    },
+  );
+}
 
-  if (!email || !password) {
-    return res.status(400).send({
-      status: "Invalid",
-      message: "Email and password are required",
+function decodeVolunteerSessionToken(token) {
+  try {
+    const session = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ["HS256"],
     });
+
+    if (
+      session.role !== "volunteer" ||
+      !mongoose.Types.ObjectId.isValid(session.volunteerId)
+    ) {
+      return null;
+    }
+    return session;
+  } catch {
+    return null;
   }
+}
 
-  const user = await admin.findOne({
-    email: email,
-    password: password,
-  });
+async function requireVolunteerSession(req, res, next) {
+  const authorization = req.get("authorization") || "";
+  const token = authorization.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length).trim()
+    : "";
 
-  if (!user) {
-    return res.status(400).send({
-      status: "Invalid",
-      message: "Invalid email or password",
-    });
-  }
+  const session = decodeVolunteerSessionToken(token);
 
-  res.status(200).send({
-    status: "Approved",
-    _id: user._id,
-    email: user.email,
-    sessionToken: createAdminSessionToken(user._id),
-  });
-});
-
-//// Get Admin Profile
-app.get("/api/getadminprofile/:_id", async (req, res) => {
-  const { _id } = req.params;
-  const data = await admin.findById(_id).select("-password");
-  if (!data) {
-    return res.status(404).send({
-      status: "Invalid",
-      message: "Admin not found",
-    });
-  }
-  res.status(200).send({
-    status: "Success",
-    data: data,
-  });
-});
-
-//Edit admin profile
-app.put("/api/editadminprofile/:_id", async (req, res) => {
-  const { _id } = req.params;
-  const { name, email } = req.body;
-
-  //Validation
-  if (!name || !email) {
-    return res.status(400).send({
-      status: "Invalid",
-      message: "Name and email are required",
-    });
-  }
-
-  // Email format validation
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(email.trim())) {
-    return res.status(400).send({
-      status: "Invalid",
-      message: "Please enter a valid email address",
+  if (!session) {
+    return res.status(401).json({
+      message: "Volunteer session is missing or expired. Please sign in again.",
     });
   }
 
   try {
-    // Check whether another admin already uses this email
+    const existingVolunteer = await volunteer.exists({
+      _id: session.volunteerId,
+      status: "Approved",
+    });
+
+    if (!existingVolunteer) {
+      return res.status(401).json({
+        message:
+          "Volunteer account is no longer available. Please sign in again.",
+      });
+    }
+
+    req.volunteerId = session.volunteerId;
+    return next();
+  } catch (error) {
+    console.error("Error verifying volunteer session:", error);
+
+    return res.status(500).json({
+      message: "Unable to verify volunteer session.",
+    });
+  }
+}
+
+//Generate Token for Women
+function createWomanSessionToken(womanId) {
+  return jwt.sign(
+    {
+      womanId: String(womanId),
+      role: "woman",
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "30d",
+      algorithm: "HS256",
+    },
+  );
+}
+
+function decodeWomanSessionToken(token) {
+  try {
+    const session = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ["HS256"],
+    });
+    if (
+      session.role !== "woman" ||
+      !mongoose.Types.ObjectId.isValid(session.womanId)
+    ) {
+      return null;
+    }
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+async function requireWomanSession(req, res, next) {
+  const authorization = req.get("authorization") || "";
+  const token = authorization.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length).trim()
+    : "";
+
+  const session = decodeWomanSessionToken(token);
+  if (!session) {
+    return res.status(401).json({
+      message:
+        "Woman User session is missing or expired. Please sign in again.",
+    });
+  }
+
+  try {
+    const existingWoman = await womanUser.exists({
+      _id: session.womanId,
+    });
+
+    if (!existingWoman) {
+      return res.status(401).json({
+        message:
+          "Woman User account is no longer available. Please sign in again.",
+      });
+    }
+    req.womanId = session.womanId;
+    return next();
+  } catch (error) {
+    console.error("Error verifying Woman User session:", error);
+    return res.status(500).json({
+      message: "Unable to verify Woman User session.",
+    });
+  }
+}
+
+async function getSOSSessionFromToken(token) {
+  const adminSession = decodeAdminSessionToken(token);
+  if (adminSession && (await admin.exists({ _id: adminSession.adminId }))) {
+    return { role: "admin", userId: adminSession.adminId };
+  }
+
+  const volunteerSession = decodeVolunteerSessionToken(token);
+  if (
+    volunteerSession &&
+    (await volunteer.exists({
+      _id: volunteerSession.volunteerId,
+      status: "Approved",
+    }))
+  ) {
+    return { role: "volunteer", userId: volunteerSession.volunteerId };
+  }
+
+  const womanSession = decodeWomanSessionToken(token);
+  if (womanSession && (await womanUser.exists({ _id: womanSession.womanId }))) {
+    return { role: "woman", userId: womanSession.womanId };
+  }
+
+  return null;
+}
+
+async function requireSOSSession(req, res, next) {
+  const authorization = req.get("authorization") || "";
+  const token = authorization.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length).trim()
+    : "";
+
+  try {
+    const session = await getSOSSessionFromToken(token);
+    if (!session) {
+      return res.status(401).json({
+        message: "A valid SafeHer session is required.",
+      });
+    }
+
+    req.sosSession = session;
+    return next();
+  } catch (error) {
+    console.error("Error verifying SOS session:", error);
+    return res.status(500).json({
+      message: "Unable to verify SafeHer session.",
+    });
+  }
+}
+
+//Admin Login API
+app.post("/api/adminlogin", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).send({
+        status: "Invalid",
+        message: "Email and password are required",
+      });
+    }
+
+    const user = await admin.findOne({
+      email: email.trim().toLowerCase(),
+    });
+
+    if (!user) {
+      return res.status(400).send({
+        status: "Invalid",
+        message: "Invalid email or password",
+      });
+    }
+
+    //compare password with bcrypt password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).send({
+        status: "Invalid",
+        message: "Invalid email or password",
+      });
+    }
+
+    //generate session token for admin
+    res.status(200).send({
+      status: "Approved",
+      _id: user._id,
+      email: user.email,
+      sessionToken: createAdminSessionToken(user._id),
+    });
+  } catch (error) {
+    console.error("Admin login error:", error);
+    res.status(500).send({
+      status: "Error",
+      message: "Something went wrong during login. Please try again later.",
+    });
+  }
+});
+
+//Get admin profile
+app.get("/api/getadminprofile/:_id", requireAdminSession, async (req, res) => {
+  try {
+    const { _id } = req.params;
+    if (String(req.adminId) !== String(_id)) {
+      return res.status(403).send({
+        status: "Invalid",
+        message: "You are not authorized to access this admin profile",
+      });
+    }
+    const data = await admin.findById(_id).select("-password");
+    if (!data) {
+      return res.status(404).send({
+        status: "Invalid",
+        message: "Admin not found",
+      });
+    }
+    res.status(200).send({
+      status: "Success",
+      data: data,
+    });
+  } catch (error) {
+    console.error("Get admin profile error:", error);
+    res.status(500).send({
+      status: "Error",
+      message: "Unable to fetch admin profile",
+    });
+  }
+});
+
+//Edit admin profile
+app.put("/api/editadminprofile/:_id", requireAdminSession, async (req, res) => {
+  const { _id } = req.params;
+  const { name, email } = req.body;
+
+  try {
+    //verify logged-in admin is updating their own account
+    if (String(req.adminId) !== String(_id)) {
+      return res.status(403).send({
+        status: "Invalid",
+        message: "You are not authorized to update this admin account",
+      });
+    }
+
+    //Validate input
+    if (typeof name !== "string" || typeof email !== "string") {
+      return res.status(400).send({
+        status: "Invalid",
+        message: "Valid name and email are required.",
+      });
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email.trim())) {
+      return res.status(400).send({
+        status: "Invalid",
+        message: "Please enter a valid email address",
+      });
+    }
+
+    //check duplicate email
     const existingAdmin = await admin.findOne({
       email: email.trim().toLowerCase(),
       _id: { $ne: _id },
@@ -1853,6 +2891,7 @@ app.put("/api/editadminprofile/:_id", async (req, res) => {
         message: "This email is already in use",
       });
     }
+
     const updatedAdmin = await admin
       .findByIdAndUpdate(
         _id,
@@ -1887,58 +2926,88 @@ app.put("/api/editadminprofile/:_id", async (req, res) => {
 });
 
 //Edit admin password
-app.put("/api/editadminpassword/:_id", async (req, res) => {
-  const { _id } = req.params;
-  const { password } = req.body;
+app.put(
+  "/api/editadminpassword/:_id",
+  requireAdminSession,
+  async (req, res) => {
+    const { _id } = req.params;
+    const { currentPassword, newPassword } = req.body;
 
-  // Validation
-  if (!password) {
-    return res.status(400).send({
-      status: "Invalid",
-      message: "New password is required",
-    });
-  }
+    try {
+      //verify logged-in admin is updating their own account
+      if (String(req.adminId) !== String(_id)) {
+        return res.status(403).send({
+          status: "Invalid",
+          message: "You are not authorized to update this admin account",
+        });
+      }
 
-  if (password.length < 6) {
-    return res.status(400).send({
-      status: "Invalid",
-      message: "Password must be at least 6 characters long",
-    });
-  }
+      //validate passwords
+      if (!currentPassword || !newPassword) {
+        return res.status(400).send({
+          status: "Invalid",
+          message: "Current password and new password are required",
+        });
+      }
 
-  try {
-    const updatedAdmin = await admin.findByIdAndUpdate(
-      _id,
-      {
-        password: password,
-      },
-      {
-        returnDocument: "after",
-        runValidators: true,
-      },
-    );
+      if (newPassword.length < 6) {
+        return res.status(400).send({
+          status: "Invalid",
+          message: "New password must be at least 6 characters long",
+        });
+      }
 
-    if (!updatedAdmin) {
-      return res.status(404).send({
-        status: "Invalid",
-        message: "Admin not found",
+      const adminData = await admin.findById(_id);
+      if (!adminData) {
+        return res.status(404).send({
+          status: "Invalid",
+          message: "Admin not found",
+        });
+      }
+
+      //verify current password
+      const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        adminData.password,
+      );
+      if (!isPasswordValid) {
+        return res.status(400).send({
+          status: "Invalid",
+          message: "Current password is incorrect",
+        });
+      }
+
+      //Prevent reusing the same password
+      const isSamePassword = await bcrypt.compare(
+        newPassword,
+        adminData.password,
+      );
+      if (isSamePassword) {
+        return res.status(400).send({
+          status: "Invalid",
+          message: "New password must be different from current password",
+        });
+      }
+
+      //Hash the new password before saving
+      adminData.password = await bcrypt.hash(newPassword, 10);
+      await adminData.save();
+      return res.status(200).send({
+        status: "Success",
+        message: "Password updated successfully",
+      });
+    } catch (error) {
+      console.log("Admin Password Update Error:", error);
+      return res.status(500).send({
+        status: "Error",
+        message: "Unable to update password",
       });
     }
-    res.status(200).send({
-      status: "Success",
-      message: "Password updated successfully",
-    });
-  } catch (error) {
-    console.log("Admin Password Update Error:", error);
-    res.status(500).send({
-      status: "Error",
-      message: "Unable to update password",
-    });
-  }
-});
+  },
+);
 
 //Get all woman data into admin
-app.get("/api/getwomanusers", async (req, res) => {
+app.get("/api/getwomanusers", requireAdminSession, async (req, res) => {
   try {
     const data = await womanUser.find().select("-password");
     res.status(200).send(data);
@@ -1971,9 +3040,14 @@ app.get("/api/getwomanuserdetails/:_id", async (req, res) => {
 });
 
 //Edit woman profile API
-app.put("/api/editwomanprofile/:_id", async (req, res) => {
+app.put("/api/editwomanprofile/:_id", requireWomanSession, async (req, res) => {
   try {
     const _id = req.params._id;
+    if (String(_id) !== String(req.womanId)) {
+      return res.status(403).json({
+        message: "You are not authorized to update this profile.",
+      });
+    }
     const { fullName, phoneNumber, city, state, pincode, address } = req.body;
 
     // Required field validation
@@ -1985,7 +3059,7 @@ app.put("/api/editwomanprofile/:_id", async (req, res) => {
 
     const updatedUser = await womanUser
       .findByIdAndUpdate(
-        _id,
+        req.womanId,
         {
           fullName,
           phoneNumber,
@@ -2021,16 +3095,22 @@ app.put("/api/editwomanprofile/:_id", async (req, res) => {
 //Edit woman profile photo API
 app.put(
   "/api/editwomanprofilephoto/:_id",
+  requireWomanSession,
   upload.single("profile_photo"),
   async (req, res) => {
     try {
       const _id = req.params._id;
+      if (String(_id) !== String(req.womanId)) {
+        return res.status(403).json({
+          message: "You are not authorized to update this profile.",
+        });
+      }
       if (!req.file) {
         return res.status(400).json({
           message: "Please select a profile photo.",
         });
       }
-      const user = await womanUser.findById(_id);
+      const user = await womanUser.findById(req.womanId);
       if (!user) {
         return res.status(404).json({
           message: "Woman user not found.",
@@ -2048,7 +3128,9 @@ app.put(
         }
       }
 
-      const updatedUser = await womanUser.findById(_id).select("-password");
+      const updatedUser = await womanUser
+        .findById(req.womanId)
+        .select("-password");
       res.status(200).json({
         message: "Profile photo updated successfully.",
         user: updatedUser,
@@ -2063,68 +3145,77 @@ app.put(
 );
 
 //change women password API for My profile page
-app.put("/api/changewomanpassword/:_id", async (req, res) => {
-  try {
-    const _id = req.params._id;
-    const { currentPassword, newPassword, confirmPassword } = req.body;
+app.put(
+  "/api/changewomanpassword/:_id",
+  requireWomanSession,
+  async (req, res) => {
+    try {
+      const _id = req.params._id;
+      if (String(_id) !== String(req.womanId)) {
+        return res.status(403).json({
+          message: "You are not authorized to update this profile.",
+        });
+      }
+      const { currentPassword, newPassword, confirmPassword } = req.body;
 
-    // Check all fields
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      return res.status(400).json({
-        message: "All password fields are required.",
+      // Check all fields
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return res.status(400).json({
+          message: "All password fields are required.",
+        });
+      }
+
+      // Check new password and confirm password
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({
+          message: "New password and confirm password do not match.",
+        });
+      }
+
+      // Get user
+      const user = await womanUser.findById(req.womanId);
+      if (!user) {
+        return res.status(404).json({
+          message: "Woman user not found.",
+        });
+      }
+
+      //Verify current bcrypt hashed password
+      const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user.password,
+      );
+      if (!isPasswordValid) {
+        return res.status(400).json({
+          message: "Current password is incorrect.",
+        });
+      }
+
+      //Check wheather new password is same as current password
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      if (isSamePassword) {
+        return res.status(400).json({
+          message: "New password must be different from current password.",
+        });
+      }
+
+      // Hash and update new password
+      user.password = await bcrypt.hash(newPassword, 12);
+      await user.save();
+      return res.status(200).json({
+        message: "Password changed successfully.",
+      });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({
+        message: "Server error.",
       });
     }
-
-    // Check new password and confirm password
-    if (newPassword !== confirmPassword) {
-      return res.status(400).json({
-        message: "New password and confirm password do not match.",
-      });
-    }
-
-    // Get user
-    const user = await womanUser.findById(_id);
-    if (!user) {
-      return res.status(404).json({
-        message: "Woman user not found.",
-      });
-    }
-
-    //Verify current bcrypt hashed password
-    const isPasswordValid = await bcrypt.compare(
-      currentPassword,
-      user.password,
-    );
-    if (!isPasswordValid) {
-      return res.status(400).json({
-        message: "Current password is incorrect.",
-      });
-    }
-
-    //Check wheather new password is same as current password
-    const isSamePassword = await bcrypt.compare(newPassword, user.password);
-    if (isSamePassword) {
-      return res.status(400).json({
-        message: "New password must be different from current password.",
-      });
-    }
-
-    // Hash and update new password
-    user.password = await bcrypt.hash(newPassword, 12);
-    await user.save();
-    return res.status(200).json({
-      message: "Password changed successfully.",
-    });
-  } catch (error) {
-    console.error("Change password error:", error);
-    res.status(500).json({
-      message: "Server error.",
-    });
-  }
-});
+  },
+);
 
 //new woman user for last 7 days
-app.get("/api/getnewwomanusers", async (req, res) => {
+app.get("/api/getnewwomanusers", requireAdminSession, async (req, res) => {
   try {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -2145,17 +3236,42 @@ app.get("/api/getnewwomanusers", async (req, res) => {
 /* ========================================================
    EMERGENCY SOS SYSTEM (Live Location & Tracking)
 ======================================================== */
-// Haversine Distance Calculation Helper
+
+// Haversine distance is the straight-line distance between two GPS points.
+function isValidGeoCoordinates(lat, lng) {
+  if (
+    lat === null ||
+    lat === undefined ||
+    lng === null ||
+    lng === undefined ||
+    lat === "" ||
+    lng === ""
+  ) {
+    return false;
+  }
+
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+  return (
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    Math.abs(latitude) <= 90 &&
+    Math.abs(longitude) <= 180
+  );
+}
+
+function isValidGeoAccuracy(accuracy) {
+  return (
+    accuracy === undefined ||
+    accuracy === null ||
+    (Number.isFinite(Number(accuracy)) && Number(accuracy) >= 0)
+  );
+}
+
 function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   if (
-    lat1 === undefined ||
-    lat1 === null ||
-    lon1 === undefined ||
-    lon1 === null ||
-    lat2 === undefined ||
-    lat2 === null ||
-    lon2 === undefined ||
-    lon2 === null
+    !isValidGeoCoordinates(lat1, lon1) ||
+    !isValidGeoCoordinates(lat2, lon2)
   ) {
     return { text: "Calculating...", meters: null };
   }
@@ -2163,12 +3279,13 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // Earth's radius in km
   const dLat = ((Number(lat2) - Number(lat1)) * Math.PI) / 180;
   const dLon = ((Number(lon2) - Number(lon1)) * Math.PI) / 180;
-  const a =
+  const rawA =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((Number(lat1) * Math.PI) / 180) *
       Math.cos((Number(lat2) * Math.PI) / 180) *
       Math.sin(dLon / 2) *
       Math.sin(dLon / 2);
+  const a = Math.min(1, Math.max(0, rawA));
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const km = R * c;
   const meters = Math.round(km * 1000);
@@ -2391,6 +3508,7 @@ const sosAlert = mongoose.model(
     womanPhone: { type: String, default: "" },
     womanLat: { type: Number, required: true },
     womanLng: { type: Number, required: true },
+    womanAccuracy: { type: Number, default: null },
     womanAddress: { type: String, default: "Current GPS Location" },
     emergencyType: { type: String, default: "Emergency Assistance" },
     priority: { type: String, default: "High" },
@@ -2407,6 +3525,7 @@ const sosAlert = mongoose.model(
     volunteerPhoto: { type: String, default: null },
     volunteerLat: { type: Number, default: null },
     volunteerLng: { type: Number, default: null },
+    volunteerAccuracy: { type: Number, default: null },
     assignedAt: { type: Date, default: null },
     volunteerLocationShared: { type: Boolean, default: false },
     distance: { type: String, default: "" },
@@ -2422,6 +3541,23 @@ const sosAlert = mongoose.model(
 // SOCKET.IO REAL-TIME EVENT SETUP
 // ==========================================
 if (io) {
+  io.use(async (socket, next) => {
+    try {
+      const session = await getSOSSessionFromToken(
+        socket.handshake.auth?.token,
+      );
+      if (!session) {
+        return next(new Error("A valid SafeHer session is required."));
+      }
+
+      socket.data.sosSession = session;
+      return next();
+    } catch (error) {
+      console.error("Socket session verification failed:", error);
+      return next(new Error("Unable to verify SafeHer session."));
+    }
+  });
+
   io.on("connection", (socket) => {
     console.log("⚡ Client connected to Socket.IO:", socket.id);
 
@@ -2433,6 +3569,20 @@ if (io) {
       }
 
       try {
+        const sos = await sosAlert.findById(sosId);
+        const session = socket.data.sosSession;
+        const canView =
+          sos &&
+          (session.role === "admin" ||
+            (session.role === "woman" &&
+              String(sos.womanId) === String(session.userId)) ||
+            (session.role === "volunteer" &&
+              String(sos.volunteerId) === String(session.userId)));
+        if (!canView) {
+          acknowledge?.({ error: "You are not authorized to view this SOS." });
+          return;
+        }
+
         await socket.join(`sos_${sosId}`);
         console.log(`Socket ${socket.id} joined room sos_${sosId}`);
         acknowledge?.({ joined: true });
@@ -2451,19 +3601,30 @@ if (io) {
 
     // Volunteer joins volunteer channel to receive new SOS broadcasts
     socket.on("join_volunteers", () => {
+      if (socket.data.sosSession?.role !== "volunteer") return;
       socket.join("volunteers_channel");
     });
 
     // Direct live location update from woman user via socket
     socket.on("update_woman_location", async (data) => {
       try {
-        const { sosId, womanLat, womanLng, womanAddress } = data;
-        if (!sosId || womanLat === undefined || womanLng === undefined) return;
+        const { sosId, womanLat, womanLng, womanAccuracy, womanAddress } = data;
+        if (
+          !sosId ||
+          !isValidGeoCoordinates(womanLat, womanLng) ||
+          !isValidGeoAccuracy(womanAccuracy)
+        )
+          return;
 
         const sos = await sosAlert.findById(sosId);
-        if (sos) {
+        if (
+          sos &&
+          socket.data.sosSession?.role === "woman" &&
+          String(sos.womanId) === String(socket.data.sosSession.userId)
+        ) {
           sos.womanLat = Number(womanLat);
           sos.womanLng = Number(womanLng);
+          if (womanAccuracy != null) sos.womanAccuracy = Number(womanAccuracy);
           if (womanAddress) sos.womanAddress = womanAddress;
           sos.updatedAt = new Date();
 
@@ -2484,6 +3645,8 @@ if (io) {
             sosId,
             womanLat: sos.womanLat,
             womanLng: sos.womanLng,
+            womanAccuracy: sos.womanAccuracy,
+            womanAddress: sos.womanAddress,
             distance: sos.distance,
             distanceMeters: sos.distanceMeters,
             sos,
@@ -2500,14 +3663,24 @@ if (io) {
     // Direct live location update from volunteer via socket
     socket.on("update_volunteer_location", async (data) => {
       try {
-        const { sosId, volunteerLat, volunteerLng } = data;
-        if (!sosId || volunteerLat === undefined || volunteerLng === undefined)
+        const { sosId, volunteerLat, volunteerLng, volunteerAccuracy } = data;
+        if (
+          !sosId ||
+          !isValidGeoCoordinates(volunteerLat, volunteerLng) ||
+          !isValidGeoAccuracy(volunteerAccuracy)
+        )
           return;
 
         const sos = await sosAlert.findById(sosId);
-        if (sos) {
+        if (
+          sos &&
+          socket.data.sosSession?.role === "volunteer" &&
+          String(sos.volunteerId) === String(socket.data.sosSession.userId)
+        ) {
           sos.volunteerLat = Number(volunteerLat);
           sos.volunteerLng = Number(volunteerLng);
+          if (volunteerAccuracy != null)
+            sos.volunteerAccuracy = Number(volunteerAccuracy);
           sos.volunteerLocationShared = true;
           if (sos.status === "Approved") {
             sos.status = "Active";
@@ -2529,6 +3702,7 @@ if (io) {
             sosId,
             volunteerLat: sos.volunteerLat,
             volunteerLng: sos.volunteerLng,
+            volunteerAccuracy: sos.volunteerAccuracy,
             distance: sos.distance,
             distanceMeters: sos.distanceMeters,
             status: sos.status,
@@ -2549,7 +3723,7 @@ if (io) {
 }
 
 // 1. CREATE or UPDATE ACTIVE SOS (Women User clicks SOS)
-app.post("/api/sos/create", async (req, res) => {
+app.post("/api/sos/create", requireWomanSession, async (req, res) => {
   try {
     const {
       womanId,
@@ -2558,14 +3732,26 @@ app.post("/api/sos/create", async (req, res) => {
       womanPhone,
       womanLat,
       womanLng,
+      womanAccuracy,
       womanAddress,
       emergencyType,
     } = req.body;
 
-    if (!womanId || womanLat === undefined || womanLng === undefined) {
+    if (
+      String(womanId) !== String(req.womanId) ||
+      !isValidGeoCoordinates(womanLat, womanLng) ||
+      !isValidGeoAccuracy(womanAccuracy)
+    ) {
       return res.status(400).json({
         message:
           "Woman ID and live GPS coordinates (latitude, longitude) are required.",
+      });
+    }
+
+    const woman = await womanUser.findById(womanId);
+    if (!woman) {
+      return res.status(404).json({
+        message: "Woman user not found.",
       });
     }
 
@@ -2578,6 +3764,8 @@ app.post("/api/sos/create", async (req, res) => {
     if (existingActive) {
       existingActive.womanLat = Number(womanLat);
       existingActive.womanLng = Number(womanLng);
+      if (womanAccuracy != null)
+        existingActive.womanAccuracy = Number(womanAccuracy);
       if (womanAddress) existingActive.womanAddress = womanAddress;
       existingActive.womanPhone = woman.phoneNumber || "";
       existingActive.womanName = woman.fullName || "Woman in Need";
@@ -2614,13 +3802,6 @@ app.post("/api/sos/create", async (req, res) => {
       });
     }
 
-    const woman = await womanUser.findById(womanId);
-    if (!woman) {
-      return res.status(404).json({
-        message: "Woman user not found.",
-      });
-    }
-
     // Create new SOS
     const newAlert = await sosAlert.create({
       womanId,
@@ -2629,6 +3810,7 @@ app.post("/api/sos/create", async (req, res) => {
       womanPhone: woman.phoneNumber || "",
       womanLat: Number(womanLat),
       womanLng: Number(womanLng),
+      womanAccuracy: womanAccuracy == null ? null : Number(womanAccuracy),
       womanAddress: womanAddress || "Current GPS Location",
       emergencyType: emergencyType || "Emergency Assistance",
       priority: "High",
@@ -2699,9 +3881,15 @@ app.post("/api/sos/create", async (req, res) => {
 });
 
 // 2. GET ACTIVE SOS FOR A SPECIFIC WOMAN
-app.get("/api/sos/active/:womanId", async (req, res) => {
+app.get("/api/sos/active/:womanId", requireWomanSession, async (req, res) => {
   try {
     const { womanId } = req.params;
+    if (String(womanId) !== String(req.womanId)) {
+      return res.status(403).json({
+        message: "You are not authorized to view this SOS request.",
+      });
+    }
+
     const activeSos = await sosAlert
       .findOne({
         womanId,
@@ -2720,8 +3908,8 @@ app.get("/api/sos/active/:womanId", async (req, res) => {
   }
 });
 
-// 3. GET ALL SOS REQUESTS (For Volunteers & Admin)
-app.get("/api/sos/all", async (req, res) => {
+// 3. GET ALL SOS REQUESTS (For Volunteers)
+app.get("/api/sos/all", requireVolunteerSession, async (req, res) => {
   try {
     const requests = await sosAlert.find().sort({ createdAt: -1 });
     const pendingCount = requests.filter((r) => r.status === "Pending").length;
@@ -2742,12 +3930,24 @@ app.get("/api/sos/all", async (req, res) => {
 });
 
 // 4. GET SINGLE SOS DETAILS
-app.get("/api/sos/details/:id", async (req, res) => {
+app.get("/api/sos/details/:id", requireSOSSession, async (req, res) => {
   try {
     const sos = await sosAlert.findById(req.params.id);
     if (!sos) {
       return res.status(404).json({ message: "SOS request not found." });
     }
+
+    const { role, userId } = req.sosSession;
+    const canView =
+      role === "admin" ||
+      (role === "woman" && String(sos.womanId) === String(userId)) ||
+      (role === "volunteer" && String(sos.volunteerId) === String(userId));
+    if (!canView) {
+      return res.status(403).json({
+        message: "You are not authorized to view this SOS request.",
+      });
+    }
+
     res.status(200).json(sos);
   } catch (error) {
     console.error("Error getting SOS details:", error);
@@ -2756,13 +3956,14 @@ app.get("/api/sos/details/:id", async (req, res) => {
 });
 
 // 5. VOLUNTEER APPROVES / ACCEPTS SOS
-app.put("/api/sos/approve/:id", async (req, res) => {
+app.put("/api/sos/approve/:id", requireVolunteerSession, async (req, res) => {
   let claimedVolunteerId = null;
   let assignmentCommitted = false;
 
   try {
     const { id } = req.params;
-    const { volunteerId, volunteerLat, volunteerLng } = req.body;
+    const { volunteerLat, volunteerLng, volunteerAccuracy } = req.body;
+    const volunteerId = String(req.volunteerId);
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid SOS ID." });
@@ -2770,6 +3971,14 @@ app.put("/api/sos/approve/:id", async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(volunteerId)) {
       return res.status(400).json({
         message: "A valid volunteer ID is required.",
+      });
+    }
+    if (
+      !isValidGeoCoordinates(volunteerLat, volunteerLng) ||
+      !isValidGeoAccuracy(volunteerAccuracy)
+    ) {
+      return res.status(400).json({
+        message: "Valid volunteer GPS coordinates are required to accept SOS.",
       });
     }
 
@@ -2818,32 +4027,25 @@ app.put("/api/sos/approve/:id", async (req, res) => {
       volunteerEmail: claimedVolunteer.email || "",
       volunteerPhone: claimedVolunteer.contact_no || "",
       volunteerPhoto: claimedVolunteer.profile_photo || null,
+      volunteerLat: Number(volunteerLat),
+      volunteerLng: Number(volunteerLng),
+      volunteerAccuracy:
+        volunteerAccuracy == null ? null : Number(volunteerAccuracy),
+      volunteerLocationShared: true,
       status: "Approved",
       acceptedAt: existingSos.acceptedAt || now,
       assignedAt: existingSos.assignedAt || now,
       updatedAt: now,
     };
 
-    if (
-      volunteerLat !== undefined &&
-      volunteerLng !== undefined &&
-      volunteerLat !== null &&
-      volunteerLng !== null
-    ) {
-      updateFields.volunteerLat = Number(volunteerLat);
-      updateFields.volunteerLng = Number(volunteerLng);
-      updateFields.volunteerLocationShared = true;
-
-      const dist = calculateHaversineDistance(
-        existingSos.womanLat,
-        existingSos.womanLng,
-        Number(volunteerLat),
-        Number(volunteerLng),
-      );
-
-      updateFields.distance = dist.text;
-      updateFields.distanceMeters = dist.meters;
-    }
+    const dist = calculateHaversineDistance(
+      existingSos.womanLat,
+      existingSos.womanLng,
+      Number(volunteerLat),
+      Number(volunteerLng),
+    );
+    updateFields.distance = dist.text;
+    updateFields.distanceMeters = dist.meters;
 
     // Atomic check: only one volunteer can approve a Pending SOS.
     const sos = await sosAlert.findOneAndUpdate(
@@ -2887,14 +4089,10 @@ app.put("/api/sos/approve/:id", async (req, res) => {
 });
 
 // 6. VOLUNTEER DISMISSES AN SOS FOR THEMSELVES
-app.put("/api/sos/reject/:id", async (req, res) => {
+app.put("/api/sos/reject/:id", requireVolunteerSession, async (req, res) => {
   try {
     const { id } = req.params;
-    const volunteerId = String(req.body?.volunteerId || "").trim();
-
-    if (!volunteerId) {
-      return res.status(400).json({ message: "Volunteer ID is required." });
-    }
+    const volunteerId = String(req.volunteerId);
 
     let sos = await sosAlert.findOneAndUpdate(
       { _id: id, status: "Pending" },
@@ -2934,87 +4132,43 @@ app.put("/api/sos/reject/:id", async (req, res) => {
 });
 
 // 7. VOLUNTEER UPDATES LIVE LOCATION
-app.put("/api/sos/update-volunteer-location/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { volunteerLat, volunteerLng } = req.body;
+app.put(
+  "/api/sos/update-volunteer-location/:id",
+  requireVolunteerSession,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { volunteerLat, volunteerLng, volunteerAccuracy } = req.body;
 
-    if (volunteerLat === undefined || volunteerLng === undefined) {
-      return res
-        .status(400)
-        .json({ message: "Volunteer coordinates are required." });
-    }
+      if (
+        !isValidGeoCoordinates(volunteerLat, volunteerLng) ||
+        !isValidGeoAccuracy(volunteerAccuracy)
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Valid volunteer coordinates are required." });
+      }
 
-    const sos = await sosAlert.findById(id);
-    if (!sos) {
-      return res.status(404).json({ message: "SOS request not found." });
-    }
+      const sos = await sosAlert.findById(id);
+      if (!sos) {
+        return res.status(404).json({ message: "SOS request not found." });
+      }
+      if (String(sos.volunteerId) !== String(req.volunteerId)) {
+        return res.status(403).json({
+          message: "You are not assigned to this SOS request.",
+        });
+      }
 
-    sos.volunteerLat = Number(volunteerLat);
-    sos.volunteerLng = Number(volunteerLng);
-    sos.volunteerLocationShared = true;
-    if (sos.status === "Approved") {
-      sos.status = "Active";
-    }
-    sos.updatedAt = new Date();
+      sos.volunteerLat = Number(volunteerLat);
+      sos.volunteerLng = Number(volunteerLng);
+      if (volunteerAccuracy != null)
+        sos.volunteerAccuracy = Number(volunteerAccuracy);
+      sos.volunteerLocationShared = true;
+      if (sos.status === "Approved") {
+        sos.status = "Active";
+      }
+      sos.updatedAt = new Date();
 
-    const dist = calculateHaversineDistance(
-      sos.womanLat,
-      sos.womanLng,
-      sos.volunteerLat,
-      sos.volunteerLng,
-    );
-    sos.distance = dist.text;
-    sos.distanceMeters = dist.meters;
-
-    await sos.save();
-
-    if (io) {
-      io.to(`sos_${id}`).emit("volunteer_location_updated", {
-        sosId: id,
-        volunteerLat: sos.volunteerLat,
-        volunteerLng: sos.volunteerLng,
-        distance: sos.distance,
-        distanceMeters: sos.distanceMeters,
-        status: sos.status,
-        sos,
-      });
-      io.to("volunteers_channel").emit("sos_updated", sos);
-    }
-
-    res.status(200).json({
-      message: "Volunteer location updated successfully.",
-      sos,
-    });
-  } catch (error) {
-    console.error("Error updating volunteer location:", error);
-    res.status(500).json({ message: "Failed to update volunteer location." });
-  }
-});
-
-// 8. WOMAN UPDATES LIVE LOCATION
-app.put("/api/sos/update-woman-location/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { womanLat, womanLng, womanAddress } = req.body;
-
-    if (womanLat === undefined || womanLng === undefined) {
-      return res
-        .status(400)
-        .json({ message: "Woman coordinates are required." });
-    }
-
-    const sos = await sosAlert.findById(id);
-    if (!sos) {
-      return res.status(404).json({ message: "SOS request not found." });
-    }
-
-    sos.womanLat = Number(womanLat);
-    sos.womanLng = Number(womanLng);
-    if (womanAddress) sos.womanAddress = womanAddress;
-    sos.updatedAt = new Date();
-
-    if (sos.volunteerLat !== null && sos.volunteerLng !== null) {
       const dist = calculateHaversineDistance(
         sos.womanLat,
         sos.womanLng,
@@ -3023,53 +4177,120 @@ app.put("/api/sos/update-woman-location/:id", async (req, res) => {
       );
       sos.distance = dist.text;
       sos.distanceMeters = dist.meters;
-    }
 
-    await sos.save();
+      await sos.save();
 
-    if (io) {
-      io.to(`sos_${id}`).emit("woman_location_updated", {
-        sosId: id,
-        womanLat: sos.womanLat,
-        womanLng: sos.womanLng,
-        distance: sos.distance,
-        distanceMeters: sos.distanceMeters,
+      if (io) {
+        io.to(`sos_${id}`).emit("volunteer_location_updated", {
+          sosId: id,
+          volunteerLat: sos.volunteerLat,
+          volunteerLng: sos.volunteerLng,
+          volunteerAccuracy: sos.volunteerAccuracy,
+          distance: sos.distance,
+          distanceMeters: sos.distanceMeters,
+          status: sos.status,
+          sos,
+        });
+        io.to("volunteers_channel").emit("sos_updated", sos);
+      }
+
+      res.status(200).json({
+        message: "Volunteer location updated successfully.",
         sos,
       });
-      io.to("volunteers_channel").emit("sos_updated", sos);
+    } catch (error) {
+      console.error("Error updating volunteer location:", error);
+      res.status(500).json({ message: "Failed to update volunteer location." });
     }
+  },
+);
 
-    res.status(200).json({
-      message: "Woman live location updated successfully.",
-      sos,
-    });
-  } catch (error) {
-    console.error("Error updating woman location:", error);
-    res.status(500).json({ message: "Failed to update woman location." });
-  }
-});
+// 8. WOMAN UPDATES LIVE LOCATION
+app.put(
+  "/api/sos/update-woman-location/:id",
+  requireWomanSession,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { womanLat, womanLng, womanAccuracy, womanAddress } = req.body;
+
+      if (
+        !isValidGeoCoordinates(womanLat, womanLng) ||
+        !isValidGeoAccuracy(womanAccuracy)
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Valid woman coordinates are required." });
+      }
+
+      const sos = await sosAlert.findById(id);
+      if (!sos) {
+        return res.status(404).json({ message: "SOS request not found." });
+      }
+      if (String(sos.womanId) !== String(req.womanId)) {
+        return res.status(403).json({
+          message: "You are not authorized to update this SOS request.",
+        });
+      }
+
+      sos.womanLat = Number(womanLat);
+      sos.womanLng = Number(womanLng);
+      if (womanAccuracy != null) sos.womanAccuracy = Number(womanAccuracy);
+      if (womanAddress) sos.womanAddress = womanAddress;
+      sos.updatedAt = new Date();
+
+      if (sos.volunteerLat !== null && sos.volunteerLng !== null) {
+        const dist = calculateHaversineDistance(
+          sos.womanLat,
+          sos.womanLng,
+          sos.volunteerLat,
+          sos.volunteerLng,
+        );
+        sos.distance = dist.text;
+        sos.distanceMeters = dist.meters;
+      }
+
+      await sos.save();
+
+      if (io) {
+        io.to(`sos_${id}`).emit("woman_location_updated", {
+          sosId: id,
+          womanLat: sos.womanLat,
+          womanLng: sos.womanLng,
+          womanAccuracy: sos.womanAccuracy,
+          womanAddress: sos.womanAddress,
+          distance: sos.distance,
+          distanceMeters: sos.distanceMeters,
+          sos,
+        });
+        io.to("volunteers_channel").emit("sos_updated", sos);
+      }
+
+      res.status(200).json({
+        message: "Woman live location updated successfully.",
+        sos,
+      });
+    } catch (error) {
+      console.error("Error updating woman location:", error);
+      res.status(500).json({ message: "Failed to update woman location." });
+    }
+  },
+);
 
 // 9. RESOLVE SOS (Emergency handled / safe)
-app.put("/api/sos/resolve/:id", async (req, res) => {
+app.put("/api/sos/resolve/:id", requireSOSSession, async (req, res) => {
   try {
     const { id } = req.params;
-    const volunteerId = String(req.body.volunteerId || "").trim();
-    const womanId = String(req.body.womanId || "").trim();
-
-    if (!volunteerId && !womanId) {
-      return res.status(400).json({
-        message: "Volunteer ID or Woman ID is required.",
-      });
-    }
-
     const sos = await sosAlert.findById(id);
     if (!sos) {
       return res.status(404).json({ message: "SOS request not found." });
     }
 
+    const { role, userId } = req.sosSession;
     const isAssignedVolunteer =
-      volunteerId && String(sos.volunteerId) === volunteerId;
-    const isWomanUser = womanId && String(sos.womanId) === womanId;
+      role === "volunteer" && String(sos.volunteerId) === String(userId);
+    const isWomanUser =
+      role === "woman" && String(sos.womanId) === String(userId);
 
     if (!isAssignedVolunteer && !isWomanUser) {
       return res.status(403).json({
@@ -3160,12 +4381,17 @@ app.put("/api/sos/resolve/:id", async (req, res) => {
 });
 
 // 10. CANCEL SOS (User cancelled)
-app.put("/api/sos/cancel/:id", async (req, res) => {
+app.put("/api/sos/cancel/:id", requireWomanSession, async (req, res) => {
   try {
     const { id } = req.params;
     const sos = await sosAlert.findById(id);
     if (!sos) {
       return res.status(404).json({ message: "SOS request not found." });
+    }
+    if (String(sos.womanId) !== String(req.womanId)) {
+      return res.status(403).json({
+        message: "You are not authorized to cancel this SOS request.",
+      });
     }
 
     sos.status = "Cancelled";

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { getVolunteerId } from "../utils/volunteerIdentity";
+import "../volunteer-css/responses.css";
 
 function Responses() {
   const [responses, setResponses] = useState([]);
@@ -106,104 +107,20 @@ function Responses() {
         })
       : "Not available";
 
-  const styles = {
-    page: {
-      padding: "30px",
-      minHeight: "100vh",
-      background: "#f8f9fc",
-      fontFamily: "Arial, sans-serif",
-    },
-    title: { margin: 0, color: "#1f2937", fontSize: "28px" },
-    subtitle: { color: "#6b7280", fontSize: "14px" },
-    stats: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-      gap: "16px",
-      margin: "24px 0",
-    },
-    stat: {
-      padding: "20px",
-      background: "#fff",
-      border: "1px solid #e5e7eb",
-      borderRadius: "9px",
-    },
-    card: {
-      background: "#fff",
-      border: "1px solid #e5e7eb",
-      borderRadius: "10px",
-      overflow: "hidden",
-    },
-    toolbar: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "12px",
-      padding: "18px",
-    },
-    input: {
-      padding: "10px",
-      border: "1px solid #d1d5db",
-      borderRadius: "6px",
-      fontSize: "13px",
-    },
-    tableWrap: { overflowX: "auto" },
-    table: {
-      width: "100%",
-      minWidth: "750px",
-      borderCollapse: "collapse",
-    },
-    th: {
-      padding: "13px",
-      textAlign: "left",
-      background: "#f3f4f6",
-      color: "#6b7280",
-      fontSize: "11px",
-    },
-    td: {
-      padding: "14px 13px",
-      borderTop: "1px solid #eee",
-      fontSize: "12px",
-      color: "#374151",
-    },
-    button: {
-      padding: "8px 12px",
-      border: 0,
-      borderRadius: "5px",
-      background: "#eef2ff",
-      color: "#4338ca",
-      cursor: "pointer",
-    },
-    overlay: {
-      position: "fixed",
-      inset: 0,
-      background: "#0008",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "20px",
-      zIndex: 1000,
-    },
-    modal: {
-      width: "100%",
-      maxWidth: "520px",
-      maxHeight: "85vh",
-      overflowY: "auto",
-      background: "#fff",
-      borderRadius: "10px",
-      padding: "24px",
-    },
-  };
-
   return (
-    <div style={styles.page}>
-      <h1 style={styles.title}>My Responses</h1>
-      <p style={styles.subtitle}>View your completed emergency responses.</p>
+    <div className="responses-page">
+      <h1 className="responses-title">My Responses</h1>
+      <p className="responses-subtitle">
+        View your completed emergency responses.
+      </p>
 
-      <div style={styles.stats}>
-        <div style={styles.stat}>
+      <div className="responses-stats">
+        <div className="responses-stat">
           <div>Total Responses</div>
           <h2>{responses.length}</h2>
         </div>
-        <div style={styles.stat}>
+
+        <div className="responses-stat">
           <div>Avg. Response Time</div>
           <h2>
             {validTimes
@@ -213,17 +130,18 @@ function Responses() {
         </div>
       </div>
 
-      <div style={styles.card}>
-        <div style={styles.toolbar}>
+      <div className="responses-card">
+        <div className="responses-toolbar">
           <input
-            style={{ ...styles.input, flex: 1, minWidth: "200px" }}
+            className="responses-input"
+            style={{ flex: 1, minWidth: "200px" }}
             placeholder="Search ID or user..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
 
           <select
-            style={styles.input}
+            className="responses-input"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
           >
@@ -233,70 +151,51 @@ function Responses() {
         </div>
 
         {loading ? (
-          <p style={{ padding: "30px" }}>Loading responses...</p>
+          <p className="responses-message">Loading responses...</p>
         ) : error ? (
-          <p style={{ padding: "30px", color: "#dc2626" }}>{error}</p>
+          <p className="responses-error">{error}</p>
         ) : (
-          <div style={styles.tableWrap}>
-            <table style={styles.table}>
+          <div className="responses-table-wrap">
+            <table className="responses-table">
               <thead>
                 <tr>
-                  <th style={styles.th}>SOS ID</th>
-                  <th style={styles.th}>Woman User</th>
-                  <th style={styles.th}>Location</th>
-                  <th style={styles.th}>Response Date</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Action</th>
+                  <th>SOS ID</th>
+                  <th>Woman User</th>
+                  <th>Location</th>
+                  <th>Response Date</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
+
               <tbody>
                 {filteredResponses.length ? (
                   filteredResponses.map((response) => (
                     <tr key={response._id}>
-                      <td style={styles.td}>
-                        {response._id.slice(-8).toUpperCase()}
-                      </td>
-                      <td style={styles.td}>
-                        {response.womanName || "Woman User"}
-                      </td>
-                      <td style={styles.td}>
-                        {response.womanAddress || "Location unavailable"}
-                      </td>
-                      <td style={styles.td}>
+                      <td>{response._id.slice(-8).toUpperCase()}</td>
+                      <td>{response.womanName || "Woman User"}</td>
+                      <td>{response.womanAddress || "Location unavailable"}</td>
+                      <td>
                         {formatDate(
                           response.status === "Resolved"
                             ? response.resolvedAt
                             : response.updatedAt || response.createdAt,
                         )}
                       </td>
-                      <td style={styles.td}>
+                      <td>
                         <span
-                          style={{
-                            ...styles.statusBadge,
-                            backgroundColor:
-                              response.displayStatus === "Resolved"
-                                ? "#dcfce7"
-                                : "#fee2e2",
-                            color:
-                              response.displayStatus === "Resolved"
-                                ? "#166534"
-                                : "#991b1b",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                            fontFamily: "Inter, Arial, sans-serif",
-                            letterSpacing: "0.3px",
-                            padding: "5px 11px",
-                            borderRadius: "20px",
-                            display: "inline-block",
-                            lineHeight: 1.4,
-                          }}
+                          className={`responses-status-badge ${
+                            response.displayStatus === "Resolved"
+                              ? "responses-status-resolved"
+                              : "responses-status-rejected"
+                          }`}
                         >
                           {response.displayStatus}
                         </span>
                       </td>
-                      <td style={styles.td}>
+                      <td>
                         <button
-                          style={styles.button}
+                          className="responses-button"
                           onClick={() => setSelectedResponse(response)}
                         >
                           View Details
@@ -306,10 +205,7 @@ function Responses() {
                   ))
                 ) : (
                   <tr>
-                    <td
-                      colSpan="6"
-                      style={{ ...styles.td, textAlign: "center" }}
-                    >
+                    <td colSpan="6" style={{ textAlign: "center" }}>
                       No responses found for the selected filters.
                     </td>
                   </tr>
@@ -321,44 +217,55 @@ function Responses() {
       </div>
 
       {selectedResponse && (
-        <div style={styles.overlay} onClick={() => setSelectedResponse(null)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div
+          className="responses-overlay"
+          onClick={() => setSelectedResponse(null)}
+        >
+          <div className="responses-modal" onClick={(e) => e.stopPropagation()}>
             <h2>Response Details</h2>
+
             <p>
               <strong>SOS ID:</strong> {selectedResponse._id}
             </p>
+
             <p>
               <strong>Woman User:</strong>{" "}
               {selectedResponse.womanName || "Woman User"}
             </p>
+
             <p>
               <strong>Emergency:</strong> {selectedResponse.emergencyType}
             </p>
+
             <p>
               <strong>Location:</strong> {selectedResponse.womanAddress}
             </p>
+
             <p>
               <strong>Requested:</strong>{" "}
               {formatDate(selectedResponse.createdAt)}
             </p>
+
             {selectedResponse.displayStatus === "Resolved" && (
               <>
                 <p>
                   <strong>Accepted:</strong>{" "}
                   {formatDate(selectedResponse.acceptedAt)}
                 </p>
+
                 <p>
                   <strong>Resolved:</strong>{" "}
                   {formatDate(selectedResponse.resolvedAt)}
                 </p>
               </>
             )}
+
             <p>
-              <strong>Status:</strong>{" "}
-              {selectedResponse.displayStatus}
+              <strong>Status:</strong> {selectedResponse.displayStatus}
             </p>
+
             <button
-              style={styles.button}
+              className="responses-button"
               onClick={() => setSelectedResponse(null)}
             >
               Close
