@@ -1,6 +1,6 @@
 # SafeHer – Administrator Application
 
-The Administrator Application is the management interface of **SafeHer – Community Safety Platform**. It enables authorized administrators to manage users, monitor emergency SOS requests, review incident reports, manage safety information, and oversee platform activities.
+The Administrator Application is the management interface of **SafeHer – Women Safety Platform**. It enables authorized administrators to manage users, monitor emergency SOS requests, review incident reports, manage safety information, and oversee platform activities.
 
 ## Overview
 
@@ -194,7 +194,7 @@ All three applications communicate with the shared SafeHer backend.
 
 ## Main Repository
 
-[SafeHer – Community Safety Platform](https://github.com/komalrathod27/SAFEHER-SYSTEM)
+[SafeHer – Women Safety Platform](https://github.com/komalrathod27/SAFEHER-SYSTEM)
 
 ---
 
