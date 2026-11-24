@@ -5,7 +5,6 @@ The Administrator Application is the management interface of **SafeHer – Commu
 ## Overview
 
 The Admin application is built using React and Vite and communicates with the SafeHer backend to manage platform data and operations.
-
 It provides a centralized dashboard for monitoring and managing the Woman User and Volunteer activities.
 
 ## Features
@@ -43,7 +42,7 @@ It provides a centralized dashboard for monitoring and managing the Woman User a
 - Monitor SOS history.
 - Track emergency response activities.
 
-### 6. Incident Reports Management
+### 6. Incident Reports Manageme
 
 - View submitted incident reports.
 - Review incident details.
@@ -98,7 +97,6 @@ administrator/
 ├── src/
 │   ├── components/
 │   ├── pages/
-│   └── safeher-css/
 │
 ├── index.html
 ├── package.json
@@ -165,8 +163,6 @@ npm run preview
 ## Backend Integration
 
 The Administrator Application communicates with the shared SafeHer backend.
-
-The backend handles:
 
 - Admin authentication and authorization.
 - User and Volunteer management.
